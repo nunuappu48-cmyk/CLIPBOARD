@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Clock,
-  ShieldAlert,
-  Plus,
-  RefreshCw,
-  Users,
-  Image as ImageIcon,
-} from 'lucide-react';
 import { useRoom } from '../hooks/useRoom';
 import { useRealtimeText } from '../hooks/useRealtimeText';
 import { useRoomImages } from '../hooks/useRoomImages';
@@ -97,8 +89,6 @@ export function Room({ onToast }) {
     return 'user2';
   }, [activeRoomId, location.hash]);
 
-  const isUser1 = userSlot === 'user1';
-  const isUser2 = userSlot === 'user2';
 
   // Presence state tracking for both users
   const [user1Online, setUser1Online] = useState(false);
@@ -113,7 +103,7 @@ export function Room({ onToast }) {
     initialContent,
     loading: roomLoading,
     error,
-    connectionStatus,
+    _connectionStatus,
     setConnectionStatus,
     timeRemaining,
     isExpiringSoon,
@@ -239,16 +229,20 @@ export function Room({ onToast }) {
   // Loading Screen
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-[#f0f0eb] flex flex-col text-[#1a1a1a]">
         <Header isInRoom={false} onToast={onToast} />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
-            <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+          <div className="panel-box max-w-sm w-full p-4">
+            <div className="panel-header-navy mb-3">
+              <span>INITIALIZING SESSION</span>
+            </div>
+            <p className="font-mono text-xs text-[#333333] mb-2">
+              Resolving credentials and binding realtime channel...
+            </p>
+            <div className="text-[11px] font-mono text-[#666666]">
+              Please wait.
+            </div>
           </div>
-          <h2 className="text-lg font-semibold text-slate-800">Connecting to Room...</h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-xs">
-            Resolving room credentials and syncing both screens.
-          </p>
         </div>
       </div>
     );
@@ -257,48 +251,44 @@ export function Room({ onToast }) {
   // Error Screen
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-[#f0f0eb] flex flex-col text-[#1a1a1a]">
         <Header isInRoom={false} onToast={onToast} />
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-lg text-center animate-in zoom-in-95 duration-200">
-            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
-              {error.code === 'ROOM_EXPIRED' ? (
-                <Clock className="w-7 h-7 text-amber-600" />
-              ) : (
-                <ShieldAlert className="w-7 h-7 text-rose-600" />
-              )}
+          <div className="panel-box max-w-md w-full">
+            <div className="bg-[#8b0000] text-white px-3 py-1.5 font-mono text-xs font-bold">
+              SESSION ERROR: {error.code || 'CONNECTION_FAILED'}
             </div>
 
-            <h2 className="text-xl font-bold text-slate-900 mb-2">
-              {error.code === 'ROOM_EXPIRED'
-                ? 'Room Has Expired'
-                : error.code === 'UNAUTHORIZED'
-                ? 'Invalid Code or Access Denied'
-                : 'Room Not Found'}
-            </h2>
+            <div className="p-4 bg-[#ffffff] text-xs">
+              <p className="font-bold text-[#1a1a1a] mb-2">
+                {error.code === 'ROOM_EXPIRED'
+                  ? 'Session Has Expired'
+                  : error.code === 'UNAUTHORIZED'
+                  ? 'Invalid Session Code or Access Denied'
+                  : 'Session Not Found'}
+              </p>
 
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              {error.message || 'Please check the room code and try again.'}
-            </p>
+              <p className="text-[#555555] mb-4 leading-relaxed font-mono">
+                {error.message || 'Please verify the 6-digit room code and try again.'}
+              </p>
 
-            <div className="flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Enter Another Code</span>
-              </button>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#cccccc]">
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="btn-classic text-xs"
+                >
+                  [ Home / Enter Code ]
+                </button>
 
-              <button
-                type="button"
-                onClick={() => reloadRoom()}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm transition-all"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>Try Again</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => reloadRoom()}
+                  className="btn-classic-primary text-xs"
+                >
+                  [ Retry Connection ]
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -307,16 +297,15 @@ export function Room({ onToast }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#f0f0eb] flex flex-col text-[#1a1a1a]">
       <Header
-        connectionStatus={connectionStatus}
         timeRemaining={timeRemaining}
         isExpiringSoon={isExpiringSoon}
         isInRoom={true}
         onToast={onToast}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col gap-5 sm:gap-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 flex flex-col gap-4">
         {/* Prominent 6-Digit Room Code Card */}
         <ShareRoomCode
           code={roomCode}
@@ -325,65 +314,23 @@ export function Room({ onToast }) {
           onToast={onToast}
         />
 
-        {/* 2-User Identity & Edit Restriction Bar */}
-        <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900">
-                  {isUser1 ? `You are ${user1Name} (Room Creator)` : `You are ${user2Name} (Joined Guest)`}
-                </span>
-                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  Locked Role
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                You can edit your screen on the {isUser1 ? 'left' : 'right'}. Your friend's screen is read-only with live updates.
-              </p>
-            </div>
-          </div>
-
-          {/* User Status Pills */}
-          <div className="flex items-center gap-2 self-stretch md:self-auto justify-between md:justify-end text-xs">
-            {/* User 1 Status */}
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium border ${
-              isUser1 ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${user1Online ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
-              <span className="font-semibold">{user1Name}</span>
-              <span className="text-[10px] text-slate-400">({isUser1 ? 'You' : 'Friend'})</span>
-            </div>
-
-            {/* User 2 Status */}
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium border ${
-              isUser2 ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${user2Online ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`}></span>
-              <span className="font-semibold">{user2Name}</span>
-              <span className="text-[10px] text-slate-400">({isUser2 ? 'You' : 'Friend'})</span>
-            </div>
-          </div>
-        </div>
 
         {/* Mobile Tab Switcher */}
-        <div className="flex sm:hidden bg-slate-200/80 p-1 rounded-xl">
+        <div className="flex sm:hidden border border-[#999999] bg-[#e5e5e0]">
           <button
             type="button"
             onClick={() => setMobileTab('split')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-              mobileTab === 'split' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'
+            className={`flex-1 py-1.5 text-xs font-bold ${
+              mobileTab === 'split' ? 'bg-[#1b365d] text-white' : 'text-[#333333]'
             }`}
           >
-            Both Screens
+            Dual Screens
           </button>
           <button
             type="button"
             onClick={() => setMobileTab('images')}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-              mobileTab === 'images' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600'
+            className={`flex-1 py-1.5 text-xs font-bold ${
+              mobileTab === 'images' ? 'bg-[#1b365d] text-white' : 'text-[#333333]'
             }`}
           >
             Images ({images.length})
@@ -415,16 +362,13 @@ export function Room({ onToast }) {
         </div>
 
         {/* Shared Screenshots & Images Gallery */}
-        <div className={`mt-2 flex flex-col gap-4 ${mobileTab === 'user1' || mobileTab === 'user2' ? 'hidden sm:flex' : 'flex'}`}>
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-slate-500" />
-              <h3 className="text-sm font-bold text-slate-800">
-                Shared Screenshots & Images
-              </h3>
-            </div>
-            <span className="text-xs text-slate-400">
-              Paste directly with <kbd className="font-mono text-[10px] bg-slate-100 px-1 py-0.5 rounded border border-slate-200">Ctrl+V</kbd>
+        <div className={`flex flex-col gap-3 ${mobileTab === 'user1' || mobileTab === 'user2' ? 'hidden sm:flex' : 'flex'}`}>
+          <div className="border-b border-[#999999] pb-1 flex items-center justify-between text-xs">
+            <span className="font-mono font-bold uppercase text-[#1a1a1a]">
+              Shared Image Repository & Screenshots
+            </span>
+            <span className="font-mono text-[11px] text-[#666666]">
+              Paste directly with <kbd className="bg-[#ece9d8] border border-[#cccccc] px-1 font-mono">Ctrl+V</kbd>
             </span>
           </div>
 

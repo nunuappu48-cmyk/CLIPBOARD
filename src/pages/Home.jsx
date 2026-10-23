@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  Zap,
-  Clock,
-  Sparkles,
-  Image as ImageIcon,
-  Hash,
-  KeyRound,
-  Users,
-} from 'lucide-react';
 import { generateRoomCode, codeToRoomCredentials } from '../lib/crypto';
 import { QuickClipApi } from '../lib/supabase';
 import { Header } from '../components/Header';
@@ -99,186 +89,157 @@ export function Home({ onToast }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#f0f0eb] text-[#1a1a1a]">
       <Header onToast={onToast} />
 
-      {/* Hero Section */}
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-20 flex flex-col items-center justify-center text-center">
-        {/* Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold mb-6 shadow-xs animate-in fade-in duration-300">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          <span>Connect with 6-Digit Code • No Sign-up Required</span>
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 flex flex-col gap-6">
+        {/* Application System Banner */}
+        <div className="panel-box">
+          <div className="panel-header-navy">
+            <span>QUICKCLIP UTILITY — SYSTEM OVERVIEW</span>
+            <span className="font-mono text-[11px] text-[#c2d7f2]">PROTOCOL v1.0</span>
+          </div>
+          <div className="p-4 bg-[#ffffff]">
+            <h1 className="text-xl sm:text-2xl font-bold font-sans text-[#1b365d] tracking-tight">
+              Real-Time Dual-User Clipboard
+            </h1>
+            <p className="mt-1 text-xs text-[#444444] leading-relaxed">
+              QuickClip is a lightweight, low-latency synchronization tool for text, code, and screenshots between two participants. Connect using an ephemeral 6-digit session code. No authentication or account registration required.
+            </p>
+          </div>
         </div>
 
-        {/* Heading */}
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight max-w-3xl leading-[1.15]">
-          Share anything. <br className="hidden sm:inline" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-            Connected by Code.
-          </span>
-        </h1>
-
-        {/* Subtitle */}
-        <p className="mt-4 text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-          A real-time dual clipboard for you and your friend. Create a room to get a 6-digit code, share the code, and both screens sync live side-by-side.
-        </p>
-
-        {/* Main Actions Box: Connect with Code OR Create New Room */}
-        <div className="mt-8 w-full max-w-xl bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xl shadow-slate-200/50 flex flex-col gap-6">
-          {/* Section 1: Connect with 6-Digit Code */}
-          <div className="flex flex-col text-left">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-1.5">
-              <KeyRound className="w-4 h-4 text-blue-600" />
-              <span>Connect Using Room Code</span>
-            </label>
-
-            <form onSubmit={handleConnectWithCode} className="flex flex-col sm:flex-row items-stretch gap-2.5">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={codeInput}
-                  onChange={handleCodeInputChange}
-                  placeholder="e.g. 784-291"
-                  maxLength={7}
-                  className="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-200 focus:border-blue-600 focus:outline-none text-xl sm:text-2xl font-mono font-bold tracking-widest text-slate-800 placeholder:text-slate-300 uppercase bg-slate-50 focus:bg-white transition-all text-center sm:text-left"
-                />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 pointer-events-none hidden sm:inline">
-                  6-DIGIT
-                </span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isJoining || codeInput.replace(/[^A-Z0-9]/g, '').length < 4}
-                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white font-bold text-sm sm:text-base shadow-md shadow-indigo-500/20 transition-all shrink-0 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {isJoining ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <span>Connect</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {joinError && (
-              <p className="text-rose-600 text-xs font-medium mt-2">{joinError}</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-px bg-slate-200 flex-1"></div>
-            <span className="text-xs uppercase font-semibold text-slate-400">or start a new session</span>
-            <div className="h-px bg-slate-200 flex-1"></div>
-          </div>
-
-          {/* Section 2: Create New Room */}
-          <button
-            type="button"
-            onClick={handleCreateRoom}
-            disabled={isCreating}
-            className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm sm:text-base shadow-md shadow-blue-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-75 disabled:hover:translate-y-0 cursor-pointer"
-          >
-            {isCreating ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Generating Room Code...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-5 h-5" />
-                <span>Create New Room & Get Code</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Workflow Steps: How Code Connection Works */}
-        <div className="mt-16 w-full">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-slate-900">How Code Connection Works</h2>
-            <p className="text-sm text-slate-500 mt-1">Share text and images without sending long, messy URLs</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            {/* Step 1 */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-base mb-4">
-                1
-              </div>
-              <h3 className="text-base font-semibold text-slate-900 mb-2">Get Your 6-Digit Code</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                Click "Create New Room". A unique 6-digit code (e.g. <strong>784-291</strong>) is instantly generated for you.
-              </p>
+        {/* Primary Action Box: Connect or Create */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Box 1: Connect via Code */}
+          <div className="panel-box flex flex-col">
+            <div className="panel-header">
+              <span>JOIN SESSION BY CODE</span>
+              <span className="font-mono text-[11px] text-[#555555]">PEER (USER 2)</span>
             </div>
 
-            {/* Step 2 */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-base mb-4">
-                2
+            <div className="p-4 bg-[#ffffff] flex-1 flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-[#555555] mb-3">
+                  Enter the 6-digit session code provided by your peer to connect:
+                </p>
+
+                <form onSubmit={handleConnectWithCode} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold font-mono uppercase mb-1 text-[#333333]">
+                      Room Code:
+                    </label>
+                    <input
+                      type="text"
+                      value={codeInput}
+                      onChange={handleCodeInputChange}
+                      placeholder="e.g. 784-291"
+                      maxLength={7}
+                      className="input-classic w-full font-mono text-base font-bold text-center tracking-widest uppercase bg-[#ffffff] border-[#707070]"
+                    />
+                  </div>
+
+                  {joinError && (
+                    <div className="p-1.5 bg-[#f2dede] border border-[#ebccd1] text-[#a94442] text-xs font-mono">
+                      Error: {joinError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isJoining || codeInput.replace(/[^A-Z0-9]/g, '').length < 4}
+                    className="btn-classic-primary w-full py-2 text-xs"
+                  >
+                    {isJoining ? 'Connecting to Room...' : '[ Connect to Room -> ]'}
+                  </button>
+                </form>
               </div>
-              <h3 className="text-base font-semibold text-slate-900 mb-2">Tell Your Friend</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                Tell your friend the code or text it to them. They type the 6 digits right on the home page and click Connect.
-              </p>
+
+              <div className="mt-4 pt-3 border-t border-[#e0e0e0] text-[11px] font-mono text-[#666666]">
+                Accepted input formats: 6 digits (XXX-XXX) or full room URL.
+              </div>
+            </div>
+          </div>
+
+          {/* Box 2: Create New Room */}
+          <div className="panel-box flex flex-col">
+            <div className="panel-header">
+              <span>CREATE NEW SESSION</span>
+              <span className="font-mono text-[11px] text-[#555555]">HOST (USER 1)</span>
             </div>
 
-            {/* Step 3 */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-base mb-4">
-                3
+            <div className="p-4 bg-[#ffffff] flex-1 flex flex-col justify-between">
+              <div>
+                <p className="text-xs text-[#555555] mb-3">
+                  Initiate a fresh shared clipboard room. A 6-digit connection code will be generated immediately for your session.
+                </p>
+
+                <div className="bg-[#fcfcfa] border border-[#d8d8d4] p-3 text-xs mb-4 space-y-1 text-[#444444]">
+                  <div>• Ephemeral room lifetime: 24 hours of inactivity</div>
+                  <div>• Dual split view: Independent editor screens</div>
+                  <div>• Storage: Shared images & screenshots repository</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCreateRoom}
+                  disabled={isCreating}
+                  className="btn-classic-olive w-full py-2 text-xs"
+                >
+                  {isCreating ? 'Generating Code & Session...' : '[ + Create New Room & Get Code ]'}
+                </button>
               </div>
-              <h3 className="text-base font-semibold text-slate-900 mb-2">Dual Screens Sync Live</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
-                User 1 (left screen) and User 2 (right screen) type, paste screenshots, and share photos simultaneously.
-              </p>
+
+              <div className="mt-4 pt-3 border-t border-[#e0e0e0] text-[11px] font-mono text-[#666666]">
+                You will be assigned User 1 (Host) role automatically.
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Feature Highlights Grid */}
-        <div className="mt-14 w-full grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/70 text-left">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600 w-fit mb-2.5">
-              <Hash className="w-4 h-4" />
-            </div>
-            <p className="text-xs font-semibold text-slate-800">6-Digit Code</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Simple, memorable room identifiers</p>
+
+        {/* Workflow Guide */}
+        <div className="panel-box">
+          <div className="panel-header">
+            <span>SESSION CONNECTION INSTRUCTIONS</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/70 text-left">
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 w-fit mb-2.5">
-              <Users className="w-4 h-4" />
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#999999] bg-[#ffffff]">
+            <div className="p-3 text-xs">
+              <div className="font-bold font-mono text-[#1b365d] mb-1">
+                STEP 1: GENERATE CODE
+              </div>
+              <p className="text-[#555555] leading-relaxed">
+                Click "Create New Room". A unique 6-digit code (e.g. 784-291) is produced and tied to a private session.
+              </p>
             </div>
-            <p className="text-xs font-semibold text-slate-800">2-User Split View</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Side-by-side live collaborative screens</p>
-          </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/70 text-left">
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 w-fit mb-2.5">
-              <ImageIcon className="w-4 h-4" />
+            <div className="p-3 text-xs">
+              <div className="font-bold font-mono text-[#1b365d] mb-1">
+                STEP 2: TRANSMIT IDENTIFIER
+              </div>
+              <p className="text-[#555555] leading-relaxed">
+                Share the 6-digit code with your peer. They enter the digits into the "Join Session" field and click connect.
+              </p>
             </div>
-            <p className="text-xs font-semibold text-slate-800">Ctrl+V Screenshots</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Paste screenshots directly from clipboard</p>
-          </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/70 text-left">
-            <div className="p-2 rounded-xl bg-violet-50 text-violet-600 w-fit mb-2.5">
-              <Clock className="w-4 h-4" />
+            <div className="p-3 text-xs">
+              <div className="font-bold font-mono text-[#1b365d] mb-1">
+                STEP 3: SYNCHRONIZED WORKSPACE
+              </div>
+              <p className="text-[#555555] leading-relaxed">
+                Both users see live updates in real time with dedicated input screens and shared file repository.
+              </p>
             </div>
-            <p className="text-xs font-semibold text-slate-800">24h Auto-Expiry</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Clean ephemeral room lifecycle</p>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white/50 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>QuickClip — Real-Time 2-User Clipboard</span>
-          <span className="text-slate-400">Connect by Code • Ephemeral • Supabase Realtime</span>
+      <footer className="border-t border-[#999999] bg-[#e5e5e0] py-3 text-xs text-[#555555] font-mono mt-auto">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>QuickClip — Real-Time Peer Clipboard Utility</span>
+          <span>Classic Interface • 1px Solid Grid • Minimalist Utility</span>
         </div>
       </footer>
     </div>

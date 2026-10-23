@@ -19,12 +19,12 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
       <Routes>
         <Route path="/" element={<Home onToast={addToast} />} />
         <Route path="/room/:roomId" element={<Room onToast={addToast} />} />
         <Route path="*" element={<NotFound onToast={addToast} />} />
       </Routes>
-      <ToastContainer toasts={toasts} onClose={removeToast} />
     </BrowserRouter>
   );
 }

@@ -1,14 +1,4 @@
-import React, { useEffect } from 'react';
-import {
-  X,
-  Download,
-  Copy,
-  Trash2,
-  Calendar,
-  HardDrive,
-  ExternalLink,
-  Check,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { formatFileSize, formatTimeAgo } from '../lib/validation';
 
 export function ImageLightbox({
@@ -17,7 +7,7 @@ export function ImageLightbox({
   onDelete,
   onToast,
 }) {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -41,9 +31,8 @@ export function ImageLightbox({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      if (onToast) onToast('Download started', 'success');
+      if (onToast) onToast('Download initiated.', 'success');
     } catch {
-      // Fallback: open link directly in new tab
       window.open(image.url, '_blank');
     }
   };
@@ -52,7 +41,7 @@ export function ImageLightbox({
     try {
       await navigator.clipboard.writeText(image.url);
       setCopied(true);
-      if (onToast) onToast('Image link copied to clipboard', 'success');
+      if (onToast) onToast('Image link copied to clipboard.', 'success');
       setTimeout(() => setCopied(false), 2000);
     } catch {
       if (onToast) onToast('Failed to copy image link', 'error');
@@ -61,91 +50,78 @@ export function ImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/50"
       onClick={onClose}
     >
       <div
-        className="relative max-w-5xl w-full max-h-[92vh] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-slate-800"
+        className="w-full max-w-4xl max-h-[92vh] bg-[#ffffff] border-2 border-[#1b365d] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
-        {/* Lightbox Header */}
-        <div className="px-5 py-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-3 z-10">
-          <div className="flex items-center gap-3 truncate">
-            <span className="text-sm font-medium text-white truncate">
-              {image.original_filename}
-            </span>
-            <span className="hidden sm:inline-block text-xs text-slate-400 font-mono">
-              ({formatFileSize(image.file_size)})
-            </span>
+        {/* Title bar */}
+        <div className="bg-[#1b365d] text-white px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold">
+          <div className="truncate pr-2">
+            VIEWER: {image.original_filename} ({formatFileSize(image.file_size)})
           </div>
+          <button
+            onClick={onClose}
+            className="btn-classic text-[10px] py-0 px-1 text-black font-bold"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+        {/* Toolbar */}
+        <div className="bg-[#ece9d8] border-b border-[#999999] px-3 py-1.5 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1">
             <button
               onClick={handleCopyLink}
-              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Copy Image URL"
+              className="btn-classic text-xs"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? '[ Copied ]' : '[ Copy URL ]'}
             </button>
             <button
               onClick={handleDownload}
-              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Download Image"
+              className="btn-classic text-xs"
             >
-              <Download className="w-4 h-4" />
+              [ Download ]
             </button>
             <button
               onClick={() => {
                 onDelete(image.id);
                 onClose();
               }}
-              className="p-2 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 transition-colors"
-              title="Delete Image"
+              className="btn-classic-danger text-xs"
             >
-              <Trash2 className="w-4 h-4" />
+              [ Delete ]
             </button>
-            <div className="h-4 w-px bg-slate-800 mx-1"></div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Close (Esc)"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Lightbox Image Preview Area */}
-        <div className="flex-1 overflow-auto flex items-center justify-center p-4 min-h-[300px] bg-slate-950/50">
-          <img
-            src={image.url}
-            alt={image.original_filename}
-            className="max-h-[68vh] max-w-full object-contain rounded-lg shadow-lg select-none"
-          />
-        </div>
-
-        {/* Lightbox Footer Bar */}
-        <div className="px-5 py-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <HardDrive className="w-3.5 h-3.5 text-slate-500" />
-              {formatFileSize(image.file_size)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-500" />
-              {formatTimeAgo(image.uploaded_at)}
-            </span>
           </div>
 
           <a
             href={image.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-[#003399] hover:underline font-mono text-xs"
           >
-            <span>Open Original</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            Open Raw Image ↗
           </a>
+        </div>
+
+        {/* Image Display */}
+        <div className="flex-1 overflow-auto flex items-center justify-center p-4 min-h-[300px] bg-[#e5e5e0]">
+          <img
+            src={image.url}
+            alt={image.original_filename}
+            className="max-h-[65vh] max-w-full object-contain border border-[#707070] bg-[#ffffff]"
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="px-3 py-1.5 bg-[#ece9d8] border-t border-[#999999] flex items-center justify-between font-mono text-[11px] text-[#555555]">
+          <span>UPLOADED: {formatTimeAgo(image.uploaded_at).toUpperCase()}</span>
+          <span>PRESS [ESC] TO CLOSE</span>
         </div>
       </div>
     </div>

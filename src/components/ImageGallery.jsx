@@ -1,12 +1,4 @@
 import React, { useState } from 'react';
-import {
-  Download,
-  Copy,
-  Trash2,
-  Maximize2,
-  Image as ImageIcon,
-  Check,
-} from 'lucide-react';
 import { formatFileSize, formatTimeAgo } from '../lib/validation';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -19,13 +11,14 @@ export function ImageGallery({
 }) {
   const [imageToDelete, setImageToDelete] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
 
   const handleCopyLink = async (e, image) => {
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(image.url);
       setCopiedId(image.id);
-      if (onToast) onToast('Image link copied to clipboard', 'success');
+      if (onToast) onToast('Image link copied to clipboard.', 'success');
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
       if (onToast) onToast('Failed to copy image link', 'error');
@@ -45,7 +38,7 @@ export function ImageGallery({
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      if (onToast) onToast('Downloading image...', 'info');
+      if (onToast) onToast('Download initiated.', 'info');
     } catch {
       window.open(image.url, '_blank');
     }
@@ -58,128 +51,198 @@ export function ImageGallery({
 
   if (loading && images.length === 0) {
     return (
-      <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
-        <p className="text-xs">Loading room images...</p>
+      <div className="p-6 bg-[#ffffff] border border-[#999999] text-center font-mono text-xs text-[#555555]">
+        [ LOADING SHARED REPOSITORY IMAGES... ]
       </div>
     );
   }
 
   if (images.length === 0) {
     return (
-      <div className="py-12 px-4 rounded-2xl border border-dashed border-slate-200/90 text-center flex flex-col items-center justify-center bg-white/50">
-        <div className="p-3 bg-slate-100 rounded-2xl text-slate-400 mb-2">
-          <ImageIcon className="w-6 h-6" />
-        </div>
-        <p className="text-sm font-medium text-slate-700">No images shared yet</p>
-        <p className="text-xs text-slate-400 mt-1 max-w-xs">
-          Upload screenshots or photos above to share them instantly with anyone in this room.
-        </p>
+      <div className="p-4 bg-[#ffffff] border border-[#999999] text-center font-mono text-xs text-[#666666]">
+        NO IMAGES OR SCREENSHOTS SHARED IN THIS SESSION YET.
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Shared Images ({images.length})
-        </h4>
+    <div className="panel-box">
+      {/* Header Bar */}
+      <div className="panel-header">
+        <span className="font-mono text-xs font-bold">
+          SHARED FILES REPOSITORY ({images.length} ITEMS)
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            className={`btn-classic text-[11px] ${viewMode === 'table' ? 'bg-[#d0d0ca] font-bold' : ''}`}
+          >
+            Table View
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`btn-classic text-[11px] ${viewMode === 'grid' ? 'bg-[#d0d0ca] font-bold' : ''}`}
+          >
+            Thumbnails
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-        {images.map((image) => (
-          <div
-            key={image.id}
-            onClick={() => onImageClick(image)}
-            className="group relative bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex flex-col"
-          >
-            {/* Image Thumbnail */}
-            <div className="relative aspect-4/3 bg-slate-100 overflow-hidden flex items-center justify-center">
-              {image.uploader_id && (
-                <span
-                  className={`absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs ${
-                    image.uploader_id === 'user1'
-                      ? 'bg-blue-600 text-white'
-                      : image.uploader_id === 'user2'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-700 text-white'
-                  }`}
+      {/* Table View */}
+      {viewMode === 'table' ? (
+        <div className="overflow-x-auto">
+          <table className="table-classic">
+            <thead>
+              <tr>
+                <th className="w-12 text-center">Thumb</th>
+                <th>File Name</th>
+                <th className="w-24">Size</th>
+                <th className="w-24">Uploaded By</th>
+                <th className="w-28">Timestamp</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {images.map((image) => (
+                <tr key={image.id}>
+                  <td className="text-center p-1">
+                    <img
+                      src={image.url}
+                      alt={image.original_filename}
+                      onClick={() => onImageClick(image)}
+                      className="w-9 h-9 object-cover border border-[#999999] cursor-pointer mx-auto bg-[#ffffff]"
+                      loading="lazy"
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => onImageClick(image)}
+                      className="text-[#003399] hover:underline font-mono text-left font-bold cursor-pointer"
+                    >
+                      {image.original_filename}
+                    </button>
+                  </td>
+                  <td className="font-mono text-xs text-[#555555]">
+                    {formatFileSize(image.file_size)}
+                  </td>
+                  <td>
+                    <span className="font-mono text-[11px] px-1 py-0.2 border border-[#999999] bg-[#ece9d8]">
+                      {image.uploader_id === 'user1' ? 'User 1' : image.uploader_id === 'user2' ? 'User 2' : 'Shared'}
+                    </span>
+                  </td>
+                  <td className="font-mono text-xs text-[#555555]">
+                    {formatTimeAgo(image.uploaded_at)}
+                  </td>
+                  <td className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onImageClick(image)}
+                        className="btn-classic text-[11px]"
+                      >
+                        [ View ]
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyLink(e, image)}
+                        className="btn-classic text-[11px]"
+                      >
+                        {copiedId === image.id ? '[ Copied ]' : '[ Copy URL ]'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownload(e, image)}
+                        className="btn-classic text-[11px]"
+                      >
+                        [ Download ]
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteClick(e, image)}
+                        className="btn-classic-danger text-[11px]"
+                      >
+                        [ Delete ]
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Dense Grid View */
+        <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+          {images.map((image) => (
+            <div
+              key={image.id}
+              className="border border-[#999999] bg-[#ffffff] p-2 flex flex-col justify-between"
+            >
+              <div>
+                <div
+                  onClick={() => onImageClick(image)}
+                  className="aspect-4/3 bg-[#eaeaea] border border-[#cccccc] overflow-hidden cursor-pointer mb-2 flex items-center justify-center"
                 >
-                  {image.uploader_id === 'user1' ? 'User 1' : image.uploader_id === 'user2' ? 'User 2' : 'Shared'}
-                </span>
-              )}
-              <img
-                src={image.url}
-                alt={image.original_filename}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                loading="lazy"
-              />
+                  <img
+                    src={image.url}
+                    alt={image.original_filename}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="font-mono text-xs font-bold truncate text-[#1a1a1a]" title={image.original_filename}>
+                  {image.original_filename}
+                </div>
+                <div className="flex items-center justify-between font-mono text-[11px] text-[#666666] mt-0.5">
+                  <span>{formatFileSize(image.file_size)}</span>
+                  <span>{image.uploader_id === 'user1' ? 'U1' : image.uploader_id === 'user2' ? 'U2' : ''}</span>
+                </div>
+              </div>
 
-              {/* Hover action overlay */}
-              <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-2">
+              <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-[#e0e0e0]">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onImageClick(image);
-                  }}
-                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 shadow-sm transition-transform active:scale-95"
-                  title="Expand preview"
+                  onClick={() => onImageClick(image)}
+                  className="btn-classic text-[10px] flex-1"
                 >
-                  <Maximize2 className="w-3.5 h-3.5" />
+                  View
                 </button>
                 <button
                   type="button"
                   onClick={(e) => handleCopyLink(e, image)}
-                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 shadow-sm transition-transform active:scale-95"
-                  title="Copy link"
+                  className="btn-classic text-[10px] flex-1"
                 >
-                  {copiedId === image.id ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
+                  {copiedId === image.id ? 'Copied' : 'Copy'}
                 </button>
                 <button
                   type="button"
                   onClick={(e) => handleDownload(e, image)}
-                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 shadow-sm transition-transform active:scale-95"
-                  title="Download"
+                  className="btn-classic text-[10px] flex-1"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  Save
                 </button>
                 <button
                   type="button"
                   onClick={(e) => handleDeleteClick(e, image)}
-                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-rose-600 shadow-sm transition-transform active:scale-95"
-                  title="Delete image"
+                  className="btn-classic-danger text-[10px]"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  Del
                 </button>
               </div>
             </div>
-
-            {/* Metadata Footer */}
-            <div className="p-2.5 bg-white flex flex-col gap-0.5">
-              <span className="text-xs font-medium text-slate-800 truncate" title={image.original_filename}>
-                {image.original_filename}
-              </span>
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span>{formatFileSize(image.file_size)}</span>
-                <span>{formatTimeAgo(image.uploaded_at)}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={Boolean(imageToDelete)}
-        title="Delete Image?"
-        message={`Are you sure you want to delete "${imageToDelete?.original_filename}"? It will be removed for everyone in this room.`}
-        confirmLabel="Delete Image"
+        title="CONFIRM FILE DELETION"
+        message={`Delete "${imageToDelete?.original_filename}"? This file will be permanently removed for all participants.`}
+        confirmLabel="Delete File"
         cancelLabel="Cancel"
         isDestructive={true}
         onConfirm={() => {
