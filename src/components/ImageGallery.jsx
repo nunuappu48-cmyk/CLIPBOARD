@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { formatFileSize, formatTimeAgo } from '../lib/validation';
-import { ConfirmDialog } from './ConfirmDialog';
 
 export function ImageGallery({
   images = [],
@@ -9,7 +8,7 @@ export function ImageGallery({
   onDeleteImage,
   onToast,
 }) {
-  const [imageToDelete, setImageToDelete] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
 
@@ -46,7 +45,15 @@ export function ImageGallery({
 
   const handleDeleteClick = (e, image) => {
     e.stopPropagation();
-    setImageToDelete(image);
+    if (confirmDeleteId === image.id) {
+      onDeleteImage(image.id);
+      setConfirmDeleteId(null);
+    } else {
+      setConfirmDeleteId(image.id);
+      setTimeout(() => {
+        setConfirmDeleteId((prev) => (prev === image.id ? null : prev));
+      }, 4000);
+    }
   };
 
   if (loading && images.length === 0) {
@@ -164,7 +171,7 @@ export function ImageGallery({
                         onClick={(e) => handleDeleteClick(e, image)}
                         className="btn-classic-danger text-[11px]"
                       >
-                        [ Delete ]
+                        {confirmDeleteId === image.id ? '[ Confirm Delete? ]' : '[ Delete ]'}
                       </button>
                     </div>
                   </td>
@@ -229,30 +236,13 @@ export function ImageGallery({
                   onClick={(e) => handleDeleteClick(e, image)}
                   className="btn-classic-danger text-[10px]"
                 >
-                  Del
+                  {confirmDeleteId === image.id ? 'Sure?' : 'Del'}
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={Boolean(imageToDelete)}
-        title="CONFIRM FILE DELETION"
-        message={`Delete "${imageToDelete?.original_filename}"? This file will be permanently removed for all participants.`}
-        confirmLabel="Delete File"
-        cancelLabel="Cancel"
-        isDestructive={true}
-        onConfirm={() => {
-          if (imageToDelete) {
-            onDeleteImage(imageToDelete.id);
-            setImageToDelete(null);
-          }
-        }}
-        onCancel={() => setImageToDelete(null)}
-      />
     </div>
   );
 }

@@ -269,6 +269,9 @@ export const QuickClipApi = {
       });
 
       if (error || !data?.success) {
+        if (error?.message?.includes('Direct deletion from storage tables') || error?.code === '42501') {
+          throw new Error('Supabase trigger error: please run "DROP TRIGGER IF EXISTS trigger_delete_storage_image ON public.room_images;" in your Supabase SQL Editor.');
+        }
         throw new Error(error?.message || data?.error || 'Failed to delete image record');
       }
 
