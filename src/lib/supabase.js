@@ -1,11 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
-import { sha256 } from './crypto';
-import { mockBackend } from './mockBackend';
+import { sha256 } from './crypto.js';
+import { mockBackend } from './mockBackend.js';
 
 // Retrieve credentials from environment or localStorage
 export function getSupabaseCredentials() {
-  const envUrl = import.meta.env.VITE_SUPABASE_URL;
-  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
+  const procEnv = typeof process !== 'undefined' ? process.env : undefined;
+
+  const envUrl = metaEnv?.VITE_SUPABASE_URL || procEnv?.VITE_SUPABASE_URL;
+  const envKey =
+    metaEnv?.VITE_SUPABASE_ANON_KEY ||
+    metaEnv?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    procEnv?.VITE_SUPABASE_ANON_KEY ||
+    procEnv?.VITE_SUPABASE_PUBLISHABLE_KEY;
 
   let localConfig = null;
   try {
@@ -90,7 +97,7 @@ export const QuickClipApi = {
       }
 
       // Opportunistic background cleanup of expired rooms
-      supabaseClient.rpc('cleanup_expired_rooms').catch(() => {});
+      Promise.resolve(supabaseClient.rpc('cleanup_expired_rooms')).catch(() => {});
 
       return data;
     }
@@ -103,7 +110,7 @@ export const QuickClipApi = {
 
     if (isSupabaseReady()) {
       // Trigger opportunistic cleanup in background
-      supabaseClient.rpc('cleanup_expired_rooms').catch(() => {});
+      Promise.resolve(supabaseClient.rpc('cleanup_expired_rooms')).catch(() => {});
 
       const { data, error } = await supabaseClient.rpc('verify_and_get_room', {
         p_room_id: roomId,
