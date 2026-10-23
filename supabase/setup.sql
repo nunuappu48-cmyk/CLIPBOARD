@@ -532,6 +532,27 @@ begin
 end;
 $$;
 
+-- Trigger: Automatically delete physical file from Supabase Storage when an image record is deleted (manual delete or room expiry cascade)
+create or replace function public.delete_storage_object_on_image_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from storage.objects
+  where bucket_id = 'quickclip-images'
+    and name = OLD.storage_path;
+  return OLD;
+end;
+$$;
+
+drop trigger if exists trigger_delete_storage_image on public.room_images;
+create trigger trigger_delete_storage_image
+  after delete on public.room_images
+  for each row
+  execute function public.delete_storage_object_on_image_delete();
+
 -- ========================================================
 -- STORAGE BUCKET CONFIGURATION & POLICIES
 -- ========================================================
