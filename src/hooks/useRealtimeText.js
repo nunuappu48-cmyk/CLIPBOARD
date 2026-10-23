@@ -2,52 +2,107 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { QuickClipApi } from '../lib/supabase';
 import { MAX_TEXT_LENGTH } from '../lib/validation';
 
+export function parseRoomText(rawText) {
+  if (!rawText) {
+    return {
+      user1: '',
+      user2: '',
+      user1UpdatedAt: null,
+      user2UpdatedAt: null,
+    };
+  }
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed && (typeof parsed.user1 === 'string' || typeof parsed.user2 === 'string')) {
+      return {
+        user1: parsed.user1 || '',
+        user2: parsed.user2 || '',
+        user1UpdatedAt: parsed.user1UpdatedAt || null,
+        user2UpdatedAt: parsed.user2UpdatedAt || null,
+      };
+    }
+  } catch {
+    // Legacy plain text treated as user1
+  }
+  return {
+    user1: rawText,
+    user2: '',
+    user1UpdatedAt: null,
+    user2UpdatedAt: null,
+  };
+}
+
+export function serializeRoomText(user1, user2, user1UpdatedAt, user2UpdatedAt) {
+  return JSON.stringify({
+    user1: user1 || '',
+    user2: user2 || '',
+    user1UpdatedAt: user1UpdatedAt || new Date().toISOString(),
+    user2UpdatedAt: user2UpdatedAt || new Date().toISOString(),
+  });
+}
+
 export function useRealtimeText({
   roomId,
   token,
-  initialText = '',
+  initialRawContent = '',
   initialVersion = 1,
   initialUpdatedAt = null,
   participantId,
+  _userSlot = 'user1',
   onToast,
 }) {
-  const [text, setText] = useState(initialText);
+  const initialParsed = parseRoomText(initialRawContent);
+
+  const [user1Text, setUser1Text] = useState(initialParsed.user1);
+  const [user2Text, setUser2Text] = useState(initialParsed.user2);
+  const [user1UpdatedAt, setUser1UpdatedAt] = useState(initialParsed.user1UpdatedAt || initialUpdatedAt);
+  const [user2UpdatedAt, setUser2UpdatedAt] = useState(initialParsed.user2UpdatedAt || initialUpdatedAt);
+
   const [version, setVersion] = useState(initialVersion);
-  const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt);
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'saving' | 'syncing' | 'error'
 
-  // References for debouncing and loop prevention
+  // Debounce and active edit tracking
   const debounceTimerRef = useRef(null);
-  const isLocalEditRef = useRef(false);
-  const pendingTextRef = useRef(initialText);
+  const isEditingUser1Ref = useRef(false);
+  const isEditingUser2Ref = useRef(false);
+  const latestUser1Ref = useRef(initialParsed.user1);
+  const latestUser2Ref = useRef(initialParsed.user2);
   const currentVersionRef = useRef(initialVersion);
 
-  // Sync state if initial values change on room load
+  // Sync state if initial raw content arrives/updates
   useEffect(() => {
-    if (initialText !== undefined && !isLocalEditRef.current) {
-      setText(initialText);
-      pendingTextRef.current = initialText;
+    if (initialRawContent !== undefined) {
+      const parsed = parseRoomText(initialRawContent);
+      if (!isEditingUser1Ref.current) {
+        setUser1Text(parsed.user1);
+        latestUser1Ref.current = parsed.user1;
+        if (parsed.user1UpdatedAt) setUser1UpdatedAt(parsed.user1UpdatedAt);
+      }
+      if (!isEditingUser2Ref.current) {
+        setUser2Text(parsed.user2);
+        latestUser2Ref.current = parsed.user2;
+        if (parsed.user2UpdatedAt) setUser2UpdatedAt(parsed.user2UpdatedAt);
+      }
     }
     if (initialVersion !== undefined) {
       setVersion(initialVersion);
       currentVersionRef.current = initialVersion;
     }
-    if (initialUpdatedAt) {
-      setUpdatedAt(initialUpdatedAt);
-    }
-  }, [initialText, initialVersion, initialUpdatedAt]);
+  }, [initialRawContent, initialVersion]);
 
-  // Persist text to database
-  const persistText = useCallback(
-    async (textToSave) => {
+  // Persist combined state to database
+  const persistChanges = useCallback(
+    async (u1Text, u2Text, u1Time, u2Time) => {
       if (!roomId || !token) return;
 
       try {
         setSaveStatus('saving');
+        const serialized = serializeRoomText(u1Text, u2Text, u1Time, u2Time);
+
         const res = await QuickClipApi.updateText(
           roomId,
           token,
-          textToSave,
+          serialized,
           currentVersionRef.current
         );
 
@@ -57,189 +112,242 @@ export function useRealtimeText({
             setVersion(res.version);
             currentVersionRef.current = res.version;
           }
-          if (res.updated_at) {
-            setUpdatedAt(res.updated_at);
-          }
         } else {
           setSaveStatus('error');
-          if (onToast) {
-            onToast('Failed to save text to database', 'error');
-          }
+          if (onToast) onToast('Failed to save text to database', 'error');
         }
       } catch (err) {
-        console.error('Text save error:', err);
+        console.error('Error saving text:', err);
         setSaveStatus('error');
-        if (onToast) {
-          onToast(err.message || 'Error saving changes', 'error');
-        }
+        if (onToast) onToast(err.message || 'Error saving clipboard', 'error');
       } finally {
-        isLocalEditRef.current = false;
+        isEditingUser1Ref.current = false;
+        isEditingUser2Ref.current = false;
       }
     },
     [roomId, token, onToast]
   );
 
-  // Handle local user typing
-  const handleTextChange = useCallback(
+  // Handle User 1 text typing
+  const handleUser1Change = useCallback(
     (newText) => {
-      // Enforce 50,000 character maximum
       if (newText.length > MAX_TEXT_LENGTH) {
-        if (onToast) {
-          onToast(`Maximum text limit reached (${MAX_TEXT_LENGTH.toLocaleString()} characters)`, 'warning');
-        }
+        if (onToast) onToast(`User 1 limit reached (${MAX_TEXT_LENGTH.toLocaleString()} chars)`, 'warning');
         newText = newText.substring(0, MAX_TEXT_LENGTH);
       }
 
-      isLocalEditRef.current = true;
-      setText(newText);
-      pendingTextRef.current = newText;
+      const now = new Date().toISOString();
+      isEditingUser1Ref.current = true;
+      setUser1Text(newText);
+      setUser1UpdatedAt(now);
+      latestUser1Ref.current = newText;
       setSaveStatus('saving');
 
-      // 1. Broadcast immediate typing preview to other connected peers
+      // 1. Broadcast immediate typing preview to other user
       QuickClipApi.broadcastEvent(roomId, 'text-typing', {
+        slot: 'user1',
         text: newText,
+        updatedAt: now,
         senderId: participantId,
         timestamp: Date.now(),
       }).catch(() => {});
 
-      // 2. Debounce persistence to database (400ms)
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
+      // 2. Debounce persistence
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
-        persistText(newText);
+        persistChanges(newText, latestUser2Ref.current, now, user2UpdatedAt);
       }, 400);
     },
-    [roomId, participantId, persistText, onToast]
+    [roomId, participantId, user2UpdatedAt, persistChanges, onToast]
   );
 
-  // Clear text
-  const handleClearText = useCallback(async () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+  // Handle User 2 text typing
+  const handleUser2Change = useCallback(
+    (newText) => {
+      if (newText.length > MAX_TEXT_LENGTH) {
+        if (onToast) onToast(`User 2 limit reached (${MAX_TEXT_LENGTH.toLocaleString()} chars)`, 'warning');
+        newText = newText.substring(0, MAX_TEXT_LENGTH);
+      }
 
-    isLocalEditRef.current = true;
-    setText('');
-    pendingTextRef.current = '';
-    setSaveStatus('saving');
+      const now = new Date().toISOString();
+      isEditingUser2Ref.current = true;
+      setUser2Text(newText);
+      setUser2UpdatedAt(now);
+      latestUser2Ref.current = newText;
+      setSaveStatus('saving');
 
-    try {
-      const res = await QuickClipApi.clearText(roomId, token);
-      if (res && res.success) {
-        setSaveStatus('saved');
-        if (res.version) {
-          setVersion(res.version);
-          currentVersionRef.current = res.version;
-        }
-        if (res.updated_at) {
-          setUpdatedAt(res.updated_at);
-        }
-        // Broadcast clear to peers
+      // 1. Broadcast immediate typing preview to other user
+      QuickClipApi.broadcastEvent(roomId, 'text-typing', {
+        slot: 'user2',
+        text: newText,
+        updatedAt: now,
+        senderId: participantId,
+        timestamp: Date.now(),
+      }).catch(() => {});
+
+      // 2. Debounce persistence
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        persistChanges(latestUser1Ref.current, newText, user1UpdatedAt, now);
+      }, 400);
+    },
+    [roomId, participantId, user1UpdatedAt, persistChanges, onToast]
+  );
+
+  // Clear specific user's clipboard
+  const handleClearUser = useCallback(
+    (slotToClear) => {
+      const now = new Date().toISOString();
+      if (slotToClear === 'user1') {
+        isEditingUser1Ref.current = true;
+        setUser1Text('');
+        setUser1UpdatedAt(now);
+        latestUser1Ref.current = '';
         QuickClipApi.broadcastEvent(roomId, 'text-typing', {
+          slot: 'user1',
           text: '',
+          updatedAt: now,
           senderId: participantId,
           timestamp: Date.now(),
         }).catch(() => {});
-
-        if (onToast) {
-          onToast('Clipboard text cleared', 'success');
-        }
-      }
-    } catch (err) {
-      setSaveStatus('error');
-      if (onToast) {
-        onToast('Failed to clear text: ' + err.message, 'error');
-      }
-    } finally {
-      isLocalEditRef.current = false;
-    }
-  }, [roomId, token, participantId, onToast]);
-
-  // Copy text to clipboard
-  const handleCopyText = useCallback(async () => {
-    if (!text) {
-      if (onToast) onToast('Clipboard is empty', 'info');
-      return;
-    }
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
+        persistChanges('', latestUser2Ref.current, now, user2UpdatedAt);
       } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+        isEditingUser2Ref.current = true;
+        setUser2Text('');
+        setUser2UpdatedAt(now);
+        latestUser2Ref.current = '';
+        QuickClipApi.broadcastEvent(roomId, 'text-typing', {
+          slot: 'user2',
+          text: '',
+          updatedAt: now,
+          senderId: participantId,
+          timestamp: Date.now(),
+        }).catch(() => {});
+        persistChanges(latestUser1Ref.current, '', user1UpdatedAt, now);
       }
-      if (onToast) {
-        onToast('Text copied to clipboard!', 'success');
-      }
-    } catch {
-      if (onToast) {
-        onToast('Failed to copy to clipboard', 'error');
-      }
-    }
-  }, [text, onToast]);
+      if (onToast) onToast(`Cleared User ${slotToClear === 'user1' ? '1' : '2'} clipboard`, 'info');
+    },
+    [roomId, participantId, user1UpdatedAt, user2UpdatedAt, persistChanges, onToast]
+  );
 
-  // Clean up debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+  // Copy text between users (e.g. User 1 copies User 2's text to their own clipboard or vice versa)
+  const handleTransferText = useCallback(
+    (fromSlot, toSlot) => {
+      const sourceText = fromSlot === 'user1' ? latestUser1Ref.current : latestUser2Ref.current;
+      if (!sourceText) {
+        if (onToast) onToast(`User ${fromSlot === 'user1' ? '1' : '2'} clipboard is empty`, 'info');
+        return;
       }
-    };
-  }, []);
 
-  // Set remote text update received from peer (called by room subscription)
+      if (toSlot === 'user1') {
+        handleUser1Change(sourceText);
+      } else {
+        handleUser2Change(sourceText);
+      }
+
+      if (onToast) {
+        onToast(`Copied User ${fromSlot === 'user1' ? '1' : '2'} text to User ${toSlot === 'user1' ? '1' : '2'}!`, 'success');
+      }
+    },
+    [handleUser1Change, handleUser2Change, onToast]
+  );
+
+  // Generic copy helper
+  const handleCopy = useCallback(
+    async (textToCopy, label = 'Text') => {
+      if (!textToCopy) {
+        if (onToast) onToast(`${label} is empty`, 'info');
+        return;
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(textToCopy);
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = textToCopy;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
+        if (onToast) onToast(`${label} copied to your clipboard!`, 'success');
+      } catch {
+        if (onToast) onToast('Failed to copy to clipboard', 'error');
+      }
+    },
+    [onToast]
+  );
+
+  // Apply remote update from broadcast
   const applyRemoteUpdate = useCallback(
     (remoteData) => {
-      // Ignore updates originated by this same tab/client
-      if (remoteData.senderId === participantId) {
-        return;
+      if (remoteData.senderId === participantId) return;
+
+      if (remoteData.slot === 'user1') {
+        if (!isEditingUser1Ref.current) {
+          setUser1Text(remoteData.text || '');
+          latestUser1Ref.current = remoteData.text || '';
+          if (remoteData.updatedAt) setUser1UpdatedAt(remoteData.updatedAt);
+        }
+      } else if (remoteData.slot === 'user2') {
+        if (!isEditingUser2Ref.current) {
+          setUser2Text(remoteData.text || '');
+          latestUser2Ref.current = remoteData.text || '';
+          if (remoteData.updatedAt) setUser2UpdatedAt(remoteData.updatedAt);
+        }
       }
-
-      // If user is actively typing right now, don't overwrite if local changes are pending
-      if (isLocalEditRef.current) {
-        return;
-      }
-
-      setText((prev) => {
-        if (prev === remoteData.text) return prev;
-        return remoteData.text || '';
-      });
-
-      pendingTextRef.current = remoteData.text || '';
-
-      if (remoteData.version) {
-        setVersion(remoteData.version);
-        currentVersionRef.current = remoteData.version;
-      }
-
-      if (remoteData.updated_at || remoteData.updatedAt) {
-        setUpdatedAt(remoteData.updated_at || remoteData.updatedAt);
-      }
-
-      setSaveStatus('saved');
     },
     [participantId]
   );
 
+  // Apply remote Postgres Changes update
+  const applyPostgresUpdate = useCallback(
+    (newRow) => {
+      if (!newRow?.text_content) return;
+      const parsed = parseRoomText(newRow.text_content);
+
+      if (!isEditingUser1Ref.current) {
+        setUser1Text(parsed.user1);
+        latestUser1Ref.current = parsed.user1;
+        if (parsed.user1UpdatedAt) setUser1UpdatedAt(parsed.user1UpdatedAt);
+      }
+
+      if (!isEditingUser2Ref.current) {
+        setUser2Text(parsed.user2);
+        latestUser2Ref.current = parsed.user2;
+        if (parsed.user2UpdatedAt) setUser2UpdatedAt(parsed.user2UpdatedAt);
+      }
+
+      if (newRow.version) {
+        setVersion(newRow.version);
+        currentVersionRef.current = newRow.version;
+      }
+
+      setSaveStatus('saved');
+    },
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, []);
+
   return {
-    text,
+    user1Text,
+    user2Text,
+    user1UpdatedAt,
+    user2UpdatedAt,
     version,
-    updatedAt,
     saveStatus,
-    characterCount: text.length,
     maxCharacters: MAX_TEXT_LENGTH,
-    handleTextChange,
-    handleClearText,
-    handleCopyText,
+    handleUser1Change,
+    handleUser2Change,
+    handleClearUser,
+    handleTransferText,
+    handleCopy,
     applyRemoteUpdate,
+    applyPostgresUpdate,
   };
 }

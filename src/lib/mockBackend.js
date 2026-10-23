@@ -233,9 +233,11 @@ export const mockBackend = {
 
       if (data.type === 'TEXT_UPDATED' && callbacks.onTextUpdate) {
         callbacks.onTextUpdate({
+          slot: data.slot || 'user1',
           text: data.text,
           version: data.version,
           updatedAt: data.updatedAt,
+          senderId: data.senderId,
         });
       }
 
@@ -246,9 +248,23 @@ export const mockBackend = {
       if (data.type === 'IMAGE_DELETED' && callbacks.onImageDeleted) {
         callbacks.onImageDeleted(data.imageId);
       }
+
+      if (data.type === 'PRESENCE_ANNOUNCE' && callbacks.onPresenceSync) {
+        callbacks.onPresenceSync({ [data.participantId]: [{ slot: data.slot }] });
+      }
     };
 
     broadcastChannel.addEventListener('message', handler);
+
+    if (callbacks.userPresence) {
+      broadcastChannel.postMessage({
+        type: 'PRESENCE_ANNOUNCE',
+        roomId,
+        slot: callbacks.userPresence.slot,
+        participantId: callbacks.userPresence.participantId,
+      });
+    }
+
     return () => {
       broadcastChannel.removeEventListener('message', handler);
     };

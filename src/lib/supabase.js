@@ -333,8 +333,19 @@ export const QuickClipApi = {
       }
     );
 
-    // 4. Presence / connection state
-    channel.subscribe((status) => {
+    // 4. Presence tracking
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState();
+      if (callbacks.onPresenceSync) {
+        callbacks.onPresenceSync(state);
+      }
+    });
+
+    // 5. Connection state and presence tracking
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED' && callbacks.userPresence) {
+        await channel.track(callbacks.userPresence);
+      }
       if (callbacks.onStatusChange) {
         callbacks.onStatusChange(status);
       }

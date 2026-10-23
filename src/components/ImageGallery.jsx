@@ -96,6 +96,19 @@ export function ImageGallery({
           >
             {/* Image Thumbnail */}
             <div className="relative aspect-4/3 bg-slate-100 overflow-hidden flex items-center justify-center">
+              {image.uploader_id && (
+                <span
+                  className={`absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs ${
+                    image.uploader_id === 'user1'
+                      ? 'bg-blue-600 text-white'
+                      : image.uploader_id === 'user2'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-700 text-white'
+                  }`}
+                >
+                  {image.uploader_id === 'user1' ? 'User 1' : image.uploader_id === 'user2' ? 'User 2' : 'Shared'}
+                </span>
+              )}
               <img
                 src={image.url}
                 alt={image.original_filename}
