@@ -237,9 +237,8 @@ export function Home({ onToast }) {
 
       {/* Footer */}
       <footer className="border-t border-[#999999] bg-[#e5e5e0] py-3 text-xs text-[#555555] font-mono mt-auto">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between gap-2">
           <span>QuickClip — Real-Time Peer Clipboard Utility</span>
-          <span>Classic Interface • 1px Solid Grid • Minimalist Utility</span>
         </div>
       </footer>
     </div>
