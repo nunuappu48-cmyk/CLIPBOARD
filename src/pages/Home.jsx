@@ -31,12 +31,13 @@ export function Home({ onToast }) {
       // Call API to create room record in Supabase or mock backend
       await QuickClipApi.createRoom(roomId, token);
 
-      // Set creator as User 1 by default
+      // Set creator strictly as User 1
+      sessionStorage.setItem(`quickclip_creator_${roomId}`, 'true');
       sessionStorage.setItem(`quickclip_slot_${roomId}`, 'user1');
       sessionStorage.setItem(`quickclip_code_${roomId}`, formattedCode);
 
-      // Navigate to room with access token and slot in URL hash
-      navigate(`/room/${formattedCode}#token=${token}&slot=user1`);
+      // Navigate to room with access token, slot, and role in URL hash
+      navigate(`/room/${formattedCode}#token=${token}&slot=user1&role=creator`);
     } catch (err) {
       console.error('Error creating room:', err);
       if (onToast) {
@@ -73,11 +74,12 @@ export function Home({ onToast }) {
 
       const { roomId, token, formattedCode } = await codeToRoomCredentials(targetCode);
 
-      // Tag this joining user as User 2 by default
+      // Anyone connecting via code is strictly User 2
+      sessionStorage.removeItem(`quickclip_creator_${roomId}`);
       sessionStorage.setItem(`quickclip_slot_${roomId}`, 'user2');
       sessionStorage.setItem(`quickclip_code_${roomId}`, formattedCode);
 
-      navigate(`/room/${formattedCode}#token=${token}&slot=user2`);
+      navigate(`/room/${formattedCode}#token=${token}&slot=user2&role=guest`);
     } catch (err) {
       setJoinError(err.message || 'Invalid room code format. Example: 784-291');
       setIsJoining(false);

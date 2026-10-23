@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Clock,
@@ -48,7 +48,6 @@ export function Room({ onToast }) {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
 
         if (!isUuid && clean.length <= 10) {
-          // Clean code e.g. '784-291' or '784291'
           const derived = await codeToRoomCredentials(clean);
           setCredentials({
             roomId: derived.roomId,
@@ -56,7 +55,6 @@ export function Room({ onToast }) {
             code: derived.formattedCode,
           });
         } else {
-          // Standard UUID
           const storedCode = sessionStorage.getItem(`quickclip_code_${clean}`);
           setCredentials({
             roomId: clean,
@@ -77,25 +75,30 @@ export function Room({ onToast }) {
   const activeToken = credentials?.token;
   const roomCode = credentials?.code;
 
-  // Determine User Slot: 'user1' | 'user2'
-  const initialSlot = useMemo(() => {
-    if (location.hash && location.hash.includes('slot=')) {
-      const match = location.hash.match(/slot=(user1|user2)/);
-      if (match && match[1]) return match[1];
-    }
-    const searchParams = new URLSearchParams(location.search);
-    const slotParam = searchParams.get('slot');
-    if (slotParam === 'user1' || slotParam === 'user2') return slotParam;
+  // Strict User Assignment:
+  // Creator is ALWAYS User 1. Joined friend is ALWAYS User 2.
+  const userSlot = useMemo(() => {
+    // 1. Check explicit role flag in URL hash
+    if (location.hash.includes('role=creator')) return 'user1';
+    if (location.hash.includes('role=guest')) return 'user2';
 
+    // 2. Check creator flag in sessionStorage
+    if (activeRoomId && sessionStorage.getItem(`quickclip_creator_${activeRoomId}`) === 'true') {
+      return 'user1';
+    }
+
+    // 3. Check saved slot
     if (activeRoomId) {
       const stored = sessionStorage.getItem(`quickclip_slot_${activeRoomId}`);
-      if (stored === 'user1' || stored === 'user2') return stored;
+      if (stored === 'user1') return 'user1';
     }
 
+    // Default: User 2 (guest joining via room code or link)
     return 'user2';
-  }, [activeRoomId, location.hash, location.search]);
+  }, [activeRoomId, location.hash]);
 
-  const [userSlot, setUserSlot] = useState(initialSlot);
+  const isUser1 = userSlot === 'user1';
+  const isUser2 = userSlot === 'user2';
 
   // Presence state tracking for both users
   const [user1Online, setUser1Online] = useState(false);
@@ -103,19 +106,6 @@ export function Room({ onToast }) {
 
   // Tab for mobile view
   const [mobileTab, setMobileTab] = useState('split');
-
-  const handleSelectSlot = useCallback(
-    (newSlot) => {
-      setUserSlot(newSlot);
-      if (activeRoomId) {
-        sessionStorage.setItem(`quickclip_slot_${activeRoomId}`, newSlot);
-      }
-      if (onToast) {
-        onToast(`Switched active screen to User ${newSlot === 'user1' ? '1' : '2'}`, 'info');
-      }
-    },
-    [activeRoomId, onToast]
-  );
 
   // Room verification hook
   const {
@@ -131,16 +121,20 @@ export function Room({ onToast }) {
     reloadRoom,
   } = useRoom(activeRoomId, activeToken);
 
-  // Dual Split Real-time Text hook
+  // Dual Split Real-time Text hook (with custom names and edit control)
   const {
     user1Text,
     user2Text,
+    user1Name,
+    user2Name,
     user1UpdatedAt,
     user2UpdatedAt,
     saveStatus,
     maxCharacters,
     handleUser1Change,
     handleUser2Change,
+    handleUser1NameChange,
+    handleUser2NameChange,
     handleClearUser,
     handleTransferText,
     handleCopy,
@@ -153,7 +147,7 @@ export function Room({ onToast }) {
     initialVersion: initialContent?.version || 1,
     initialUpdatedAt: initialContent?.updated_at || null,
     participantId,
-    _userSlot: userSlot,
+    userSlot,
     onToast,
   });
 
@@ -253,7 +247,7 @@ export function Room({ onToast }) {
           </div>
           <h2 className="text-lg font-semibold text-slate-800">Connecting to Room...</h2>
           <p className="text-xs text-slate-500 mt-1 max-w-xs">
-            Resolving 6-digit room code and establishing real-time sync.
+            Resolving room credentials and syncing both screens.
           </p>
         </div>
       </div>
@@ -284,7 +278,7 @@ export function Room({ onToast }) {
             </h2>
 
             <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              {error.message || 'Please check the 6-digit room code and try again.'}
+              {error.message || 'Please check the room code and try again.'}
             </p>
 
             <div className="flex flex-col gap-2.5">
@@ -331,7 +325,7 @@ export function Room({ onToast }) {
           onToast={onToast}
         />
 
-        {/* 2-User Slot & Presence Bar */}
+        {/* 2-User Identity & Edit Restriction Bar */}
         <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0">
@@ -339,52 +333,38 @@ export function Room({ onToast }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900">2-User Split Workspace</span>
+                <span className="text-sm font-bold text-slate-900">
+                  {isUser1 ? `You are ${user1Name} (Room Creator)` : `You are ${user2Name} (Joined Guest)`}
+                </span>
                 <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  Code: {roomCode}
+                  Locked Role
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                User 1 (left) and User 2 (right) share text and images live on both screens.
+                You can edit your screen on the {isUser1 ? 'left' : 'right'}. Your friend's screen is read-only with live updates.
               </p>
             </div>
           </div>
 
-          {/* User Presence & Slot Selector */}
-          <div className="flex items-center gap-2 self-stretch md:self-auto justify-between md:justify-end">
-            <span className="text-xs font-medium text-slate-400 mr-1 hidden sm:inline">
-              Your Screen:
-            </span>
+          {/* User Status Pills */}
+          <div className="flex items-center gap-2 self-stretch md:self-auto justify-between md:justify-end text-xs">
+            {/* User 1 Status */}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium border ${
+              isUser1 ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${user1Online ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className="font-semibold">{user1Name}</span>
+              <span className="text-[10px] text-slate-400">({isUser1 ? 'You' : 'Friend'})</span>
+            </div>
 
-            {/* User 1 Button */}
-            <button
-              type="button"
-              onClick={() => handleSelectSlot('user1')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                userSlot === 'user1'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${user1Online ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
-              <span>User 1</span>
-              {userSlot === 'user1' && <span className="text-[10px] opacity-80">(You)</span>}
-            </button>
-
-            {/* User 2 Button */}
-            <button
-              type="button"
-              onClick={() => handleSelectSlot('user2')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                userSlot === 'user2'
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${user2Online ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
-              <span>User 2</span>
-              {userSlot === 'user2' && <span className="text-[10px] opacity-80">(You)</span>}
-            </button>
+            {/* User 2 Status */}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium border ${
+              isUser2 ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${user2Online ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`}></span>
+              <span className="font-semibold">{user2Name}</span>
+              <span className="text-[10px] text-slate-400">({isUser2 ? 'You' : 'Friend'})</span>
+            </div>
           </div>
         </div>
 
@@ -416,6 +396,8 @@ export function Room({ onToast }) {
             userSlot={userSlot}
             user1Text={user1Text}
             user2Text={user2Text}
+            user1Name={user1Name}
+            user2Name={user2Name}
             user1UpdatedAt={user1UpdatedAt}
             user2UpdatedAt={user2UpdatedAt}
             user1Online={user1Online}
@@ -424,6 +406,8 @@ export function Room({ onToast }) {
             maxCharacters={maxCharacters}
             onUser1Change={handleUser1Change}
             onUser2Change={handleUser2Change}
+            onUser1NameChange={handleUser1NameChange}
+            onUser2NameChange={handleUser2NameChange}
             onClearUser={handleClearUser}
             onTransferText={handleTransferText}
             onCopy={handleCopy}

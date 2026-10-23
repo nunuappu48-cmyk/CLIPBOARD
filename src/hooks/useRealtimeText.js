@@ -7,6 +7,8 @@ export function parseRoomText(rawText) {
     return {
       user1: '',
       user2: '',
+      user1Name: 'User 1',
+      user2Name: 'User 2',
       user1UpdatedAt: null,
       user2UpdatedAt: null,
     };
@@ -17,6 +19,8 @@ export function parseRoomText(rawText) {
       return {
         user1: parsed.user1 || '',
         user2: parsed.user2 || '',
+        user1Name: parsed.user1Name || 'User 1',
+        user2Name: parsed.user2Name || 'User 2',
         user1UpdatedAt: parsed.user1UpdatedAt || null,
         user2UpdatedAt: parsed.user2UpdatedAt || null,
       };
@@ -27,15 +31,19 @@ export function parseRoomText(rawText) {
   return {
     user1: rawText,
     user2: '',
+    user1Name: 'User 1',
+    user2Name: 'User 2',
     user1UpdatedAt: null,
     user2UpdatedAt: null,
   };
 }
 
-export function serializeRoomText(user1, user2, user1UpdatedAt, user2UpdatedAt) {
+export function serializeRoomText(user1, user2, user1Name, user2Name, user1UpdatedAt, user2UpdatedAt) {
   return JSON.stringify({
     user1: user1 || '',
     user2: user2 || '',
+    user1Name: user1Name || 'User 1',
+    user2Name: user2Name || 'User 2',
     user1UpdatedAt: user1UpdatedAt || new Date().toISOString(),
     user2UpdatedAt: user2UpdatedAt || new Date().toISOString(),
   });
@@ -55,11 +63,13 @@ export function useRealtimeText({
 
   const [user1Text, setUser1Text] = useState(initialParsed.user1);
   const [user2Text, setUser2Text] = useState(initialParsed.user2);
+  const [user1Name, setUser1Name] = useState(initialParsed.user1Name);
+  const [user2Name, setUser2Name] = useState(initialParsed.user2Name);
   const [user1UpdatedAt, setUser1UpdatedAt] = useState(initialParsed.user1UpdatedAt || initialUpdatedAt);
   const [user2UpdatedAt, setUser2UpdatedAt] = useState(initialParsed.user2UpdatedAt || initialUpdatedAt);
 
   const [version, setVersion] = useState(initialVersion);
-  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'saving' | 'syncing' | 'error'
+  const [saveStatus, setSaveStatus] = useState('saved');
 
   // Debounce and active edit tracking
   const debounceTimerRef = useRef(null);
@@ -67,6 +77,8 @@ export function useRealtimeText({
   const isEditingUser2Ref = useRef(false);
   const latestUser1Ref = useRef(initialParsed.user1);
   const latestUser2Ref = useRef(initialParsed.user2);
+  const latestUser1NameRef = useRef(initialParsed.user1Name);
+  const latestUser2NameRef = useRef(initialParsed.user2Name);
   const currentVersionRef = useRef(initialVersion);
 
   // Sync state if initial raw content arrives/updates
@@ -83,6 +95,14 @@ export function useRealtimeText({
         latestUser2Ref.current = parsed.user2;
         if (parsed.user2UpdatedAt) setUser2UpdatedAt(parsed.user2UpdatedAt);
       }
+      if (parsed.user1Name) {
+        setUser1Name(parsed.user1Name);
+        latestUser1NameRef.current = parsed.user1Name;
+      }
+      if (parsed.user2Name) {
+        setUser2Name(parsed.user2Name);
+        latestUser2NameRef.current = parsed.user2Name;
+      }
     }
     if (initialVersion !== undefined) {
       setVersion(initialVersion);
@@ -92,12 +112,12 @@ export function useRealtimeText({
 
   // Persist combined state to database
   const persistChanges = useCallback(
-    async (u1Text, u2Text, u1Time, u2Time) => {
+    async (u1Text, u2Text, u1Name, u2Name, u1Time, u2Time) => {
       if (!roomId || !token) return;
 
       try {
         setSaveStatus('saving');
-        const serialized = serializeRoomText(u1Text, u2Text, u1Time, u2Time);
+        const serialized = serializeRoomText(u1Text, u2Text, u1Name, u2Name, u1Time, u2Time);
 
         const res = await QuickClipApi.updateText(
           roomId,
@@ -132,7 +152,7 @@ export function useRealtimeText({
   const handleUser1Change = useCallback(
     (newText) => {
       if (newText.length > MAX_TEXT_LENGTH) {
-        if (onToast) onToast(`User 1 limit reached (${MAX_TEXT_LENGTH.toLocaleString()} chars)`, 'warning');
+        if (onToast) onToast(`Text limit reached (${MAX_TEXT_LENGTH.toLocaleString()} chars)`, 'warning');
         newText = newText.substring(0, MAX_TEXT_LENGTH);
       }
 
@@ -143,7 +163,7 @@ export function useRealtimeText({
       latestUser1Ref.current = newText;
       setSaveStatus('saving');
 
-      // 1. Broadcast immediate typing preview to other user
+      // Broadcast immediate typing preview
       QuickClipApi.broadcastEvent(roomId, 'text-typing', {
         slot: 'user1',
         text: newText,
@@ -152,10 +172,17 @@ export function useRealtimeText({
         timestamp: Date.now(),
       }).catch(() => {});
 
-      // 2. Debounce persistence
+      // Debounce persistence
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
-        persistChanges(newText, latestUser2Ref.current, now, user2UpdatedAt);
+        persistChanges(
+          newText,
+          latestUser2Ref.current,
+          latestUser1NameRef.current,
+          latestUser2NameRef.current,
+          now,
+          user2UpdatedAt
+        );
       }, 400);
     },
     [roomId, participantId, user2UpdatedAt, persistChanges, onToast]
@@ -165,7 +192,7 @@ export function useRealtimeText({
   const handleUser2Change = useCallback(
     (newText) => {
       if (newText.length > MAX_TEXT_LENGTH) {
-        if (onToast) onToast(`User 2 limit reached (${MAX_TEXT_LENGTH.toLocaleString()} chars)`, 'warning');
+        if (onToast) onToast(`Text limit reached (${MAX_TEXT_LENGTH.toLocaleString()} chars)`, 'warning');
         newText = newText.substring(0, MAX_TEXT_LENGTH);
       }
 
@@ -176,7 +203,7 @@ export function useRealtimeText({
       latestUser2Ref.current = newText;
       setSaveStatus('saving');
 
-      // 1. Broadcast immediate typing preview to other user
+      // Broadcast immediate typing preview
       QuickClipApi.broadcastEvent(roomId, 'text-typing', {
         slot: 'user2',
         text: newText,
@@ -185,13 +212,76 @@ export function useRealtimeText({
         timestamp: Date.now(),
       }).catch(() => {});
 
-      // 2. Debounce persistence
+      // Debounce persistence
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
-        persistChanges(latestUser1Ref.current, newText, user1UpdatedAt, now);
+        persistChanges(
+          latestUser1Ref.current,
+          newText,
+          latestUser1NameRef.current,
+          latestUser2NameRef.current,
+          user1UpdatedAt,
+          now
+        );
       }, 400);
     },
     [roomId, participantId, user1UpdatedAt, persistChanges, onToast]
+  );
+
+  // Handle User 1 Name edit
+  const handleUser1NameChange = useCallback(
+    (newName) => {
+      const cleanName = newName.trim().substring(0, 30) || 'User 1';
+      setUser1Name(cleanName);
+      latestUser1NameRef.current = cleanName;
+
+      // Broadcast name change
+      QuickClipApi.broadcastEvent(roomId, 'name-update', {
+        slot: 'user1',
+        name: cleanName,
+        senderId: participantId,
+      }).catch(() => {});
+
+      persistChanges(
+        latestUser1Ref.current,
+        latestUser2Ref.current,
+        cleanName,
+        latestUser2NameRef.current,
+        user1UpdatedAt,
+        user2UpdatedAt
+      );
+
+      if (onToast) onToast(`Screen renamed to "${cleanName}"`, 'success');
+    },
+    [roomId, participantId, user1UpdatedAt, user2UpdatedAt, persistChanges, onToast]
+  );
+
+  // Handle User 2 Name edit
+  const handleUser2NameChange = useCallback(
+    (newName) => {
+      const cleanName = newName.trim().substring(0, 30) || 'User 2';
+      setUser2Name(cleanName);
+      latestUser2NameRef.current = cleanName;
+
+      // Broadcast name change
+      QuickClipApi.broadcastEvent(roomId, 'name-update', {
+        slot: 'user2',
+        name: cleanName,
+        senderId: participantId,
+      }).catch(() => {});
+
+      persistChanges(
+        latestUser1Ref.current,
+        latestUser2Ref.current,
+        latestUser1NameRef.current,
+        cleanName,
+        user1UpdatedAt,
+        user2UpdatedAt
+      );
+
+      if (onToast) onToast(`Screen renamed to "${cleanName}"`, 'success');
+    },
+    [roomId, participantId, user1UpdatedAt, user2UpdatedAt, persistChanges, onToast]
   );
 
   // Clear specific user's clipboard
@@ -210,7 +300,14 @@ export function useRealtimeText({
           senderId: participantId,
           timestamp: Date.now(),
         }).catch(() => {});
-        persistChanges('', latestUser2Ref.current, now, user2UpdatedAt);
+        persistChanges(
+          '',
+          latestUser2Ref.current,
+          latestUser1NameRef.current,
+          latestUser2NameRef.current,
+          now,
+          user2UpdatedAt
+        );
       } else {
         isEditingUser2Ref.current = true;
         setUser2Text('');
@@ -223,19 +320,26 @@ export function useRealtimeText({
           senderId: participantId,
           timestamp: Date.now(),
         }).catch(() => {});
-        persistChanges(latestUser1Ref.current, '', user1UpdatedAt, now);
+        persistChanges(
+          latestUser1Ref.current,
+          '',
+          latestUser1NameRef.current,
+          latestUser2NameRef.current,
+          user1UpdatedAt,
+          now
+        );
       }
-      if (onToast) onToast(`Cleared User ${slotToClear === 'user1' ? '1' : '2'} clipboard`, 'info');
+      if (onToast) onToast('Cleared clipboard', 'info');
     },
     [roomId, participantId, user1UpdatedAt, user2UpdatedAt, persistChanges, onToast]
   );
 
-  // Copy text between users (e.g. User 1 copies User 2's text to their own clipboard or vice versa)
+  // Copy text between users (e.g. User 2 copies User 1's text to their screen)
   const handleTransferText = useCallback(
     (fromSlot, toSlot) => {
       const sourceText = fromSlot === 'user1' ? latestUser1Ref.current : latestUser2Ref.current;
       if (!sourceText) {
-        if (onToast) onToast(`User ${fromSlot === 'user1' ? '1' : '2'} clipboard is empty`, 'info');
+        if (onToast) onToast('Source screen is empty', 'info');
         return;
       }
 
@@ -246,7 +350,7 @@ export function useRealtimeText({
       }
 
       if (onToast) {
-        onToast(`Copied User ${fromSlot === 'user1' ? '1' : '2'} text to User ${toSlot === 'user1' ? '1' : '2'}!`, 'success');
+        onToast('Copied content to your screen!', 'success');
       }
     },
     [handleUser1Change, handleUser2Change, onToast]
@@ -270,7 +374,7 @@ export function useRealtimeText({
           document.execCommand('copy');
           document.body.removeChild(textarea);
         }
-        if (onToast) onToast(`${label} copied to your clipboard!`, 'success');
+        if (onToast) onToast(`${label} copied to clipboard!`, 'success');
       } catch {
         if (onToast) onToast('Failed to copy to clipboard', 'error');
       }
@@ -283,17 +387,29 @@ export function useRealtimeText({
     (remoteData) => {
       if (remoteData.senderId === participantId) return;
 
-      if (remoteData.slot === 'user1') {
+      // Handle text typing
+      if (remoteData.slot === 'user1' && remoteData.text !== undefined) {
         if (!isEditingUser1Ref.current) {
           setUser1Text(remoteData.text || '');
           latestUser1Ref.current = remoteData.text || '';
           if (remoteData.updatedAt) setUser1UpdatedAt(remoteData.updatedAt);
         }
-      } else if (remoteData.slot === 'user2') {
+      } else if (remoteData.slot === 'user2' && remoteData.text !== undefined) {
         if (!isEditingUser2Ref.current) {
           setUser2Text(remoteData.text || '');
           latestUser2Ref.current = remoteData.text || '';
           if (remoteData.updatedAt) setUser2UpdatedAt(remoteData.updatedAt);
+        }
+      }
+
+      // Handle name change
+      if (remoteData.name) {
+        if (remoteData.slot === 'user1') {
+          setUser1Name(remoteData.name);
+          latestUser1NameRef.current = remoteData.name;
+        } else if (remoteData.slot === 'user2') {
+          setUser2Name(remoteData.name);
+          latestUser2NameRef.current = remoteData.name;
         }
       }
     },
@@ -318,6 +434,15 @@ export function useRealtimeText({
         if (parsed.user2UpdatedAt) setUser2UpdatedAt(parsed.user2UpdatedAt);
       }
 
+      if (parsed.user1Name) {
+        setUser1Name(parsed.user1Name);
+        latestUser1NameRef.current = parsed.user1Name;
+      }
+      if (parsed.user2Name) {
+        setUser2Name(parsed.user2Name);
+        latestUser2NameRef.current = parsed.user2Name;
+      }
+
       if (newRow.version) {
         setVersion(newRow.version);
         currentVersionRef.current = newRow.version;
@@ -337,6 +462,8 @@ export function useRealtimeText({
   return {
     user1Text,
     user2Text,
+    user1Name,
+    user2Name,
     user1UpdatedAt,
     user2UpdatedAt,
     version,
@@ -344,6 +471,8 @@ export function useRealtimeText({
     maxCharacters: MAX_TEXT_LENGTH,
     handleUser1Change,
     handleUser2Change,
+    handleUser1NameChange,
+    handleUser2NameChange,
     handleClearUser,
     handleTransferText,
     handleCopy,
