@@ -89,6 +89,9 @@ export const QuickClipApi = {
         throw new Error(error.message || 'Failed to create room in Supabase');
       }
 
+      // Opportunistic background cleanup of expired rooms
+      supabaseClient.rpc('cleanup_expired_rooms').catch(() => {});
+
       return data;
     }
 
@@ -99,6 +102,9 @@ export const QuickClipApi = {
     const tokenHash = await sha256(token);
 
     if (isSupabaseReady()) {
+      // Trigger opportunistic cleanup in background
+      supabaseClient.rpc('cleanup_expired_rooms').catch(() => {});
+
       const { data, error } = await supabaseClient.rpc('verify_and_get_room', {
         p_room_id: roomId,
         p_token_hash: tokenHash,
