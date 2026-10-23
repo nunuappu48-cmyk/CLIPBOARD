@@ -92,7 +92,6 @@ export function ShareRoomCode({
           >
             {showLink ? '[-] Hide Direct URL' : '[+] Need direct URL link instead?'}
           </button>
-          <span className="text-[#666666] font-mono text-[11px]">Direct Hash Authentication</span>
         </div>
 
         {showLink && (

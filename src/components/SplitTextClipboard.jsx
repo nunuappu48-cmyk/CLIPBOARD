@@ -63,11 +63,10 @@ export function SplitTextClipboard({
         {/* PANE 1: USER 1 (HOST / CREATOR) */}
         {/* ========================================================= */}
         <div
-          className={`panel-box flex flex-col h-[520px] sm:h-[580px] ${
-            isUser1
+          className={`panel-box flex flex-col h-[520px] sm:h-[580px] ${isUser1
               ? 'border-2 border-[#1b365d]'
               : 'border border-[#999999] bg-[#f9f9f7]'
-          }`}
+            }`}
         >
           {/* Header Bar */}
           <div className="panel-header">
@@ -120,13 +119,12 @@ export function SplitTextClipboard({
                     </button>
                   )}
                   <span
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.2 border ${
-                      isUser1
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.2 border ${isUser1
                         ? 'bg-[#dff0d8] border-[#3c763d] text-[#3c763d]'
                         : 'bg-[#eeeeee] border-[#999999] text-[#666666]'
-                    }`}
+                      }`}
                   >
-                    {isUser1 ? 'YOU (EDIT)' : 'READ-ONLY'}
+                    {isUser1 ? 'YOU' : 'READ-ONLY'}
                   </span>
                 </div>
               )}
@@ -200,9 +198,8 @@ export function SplitTextClipboard({
                   ? "Type or paste text here (Ctrl+V supported). Peer sees this screen synchronized in real time."
                   : `Waiting for ${user1Name} to input text... Everything appears here live (Read-only mode).`
               }
-              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs leading-relaxed ${
-                user1Monospace ? 'font-mono' : 'font-sans'
-              } ${!isUser1 ? 'cursor-default select-text bg-[#fcfcfa]' : 'bg-[#ffffff]'}`}
+              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs leading-relaxed ${user1Monospace ? 'font-mono' : 'font-sans'
+                } ${!isUser1 ? 'cursor-default select-text bg-[#fcfcfa]' : 'bg-[#ffffff]'}`}
               spellCheck={false}
             />
           </div>
@@ -222,11 +219,10 @@ export function SplitTextClipboard({
         {/* PANE 2: USER 2 (GUEST) */}
         {/* ========================================================= */}
         <div
-          className={`panel-box flex flex-col h-[520px] sm:h-[580px] ${
-            isUser2
+          className={`panel-box flex flex-col h-[520px] sm:h-[580px] ${isUser2
               ? 'border-2 border-[#1b365d]'
               : 'border border-[#999999] bg-[#f9f9f7]'
-          }`}
+            }`}
         >
           {/* Header Bar */}
           <div className="panel-header">
@@ -279,13 +275,12 @@ export function SplitTextClipboard({
                     </button>
                   )}
                   <span
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.2 border ${
-                      isUser2
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.2 border ${isUser2
                         ? 'bg-[#dff0d8] border-[#3c763d] text-[#3c763d]'
                         : 'bg-[#eeeeee] border-[#999999] text-[#666666]'
-                    }`}
+                      }`}
                   >
-                    {isUser2 ? 'YOU (EDIT)' : 'READ-ONLY'}
+                    {isUser2 ? 'YOU' : 'READ-ONLY'}
                   </span>
                 </div>
               )}
@@ -359,9 +354,8 @@ export function SplitTextClipboard({
                   ? "Type or paste text here (Ctrl+V supported). Peer sees this screen synchronized in real time."
                   : `Waiting for ${user2Name} to join and type... Everything appears here live (Read-only mode).`
               }
-              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs leading-relaxed ${
-                user2Monospace ? 'font-mono' : 'font-sans'
-              } ${!isUser2 ? 'cursor-default select-text bg-[#fcfcfa]' : 'bg-[#ffffff]'}`}
+              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs leading-relaxed ${user2Monospace ? 'font-mono' : 'font-sans'
+                } ${!isUser2 ? 'cursor-default select-text bg-[#fcfcfa]' : 'bg-[#ffffff]'}`}
               spellCheck={false}
             />
           </div>

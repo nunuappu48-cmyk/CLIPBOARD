@@ -4,6 +4,7 @@ import { Home } from './pages/Home';
 import { Room } from './pages/Room';
 import { NotFound } from './pages/NotFound';
 import { ToastContainer } from './components/Toast';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [toasts, setToasts] = useState([]);
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/room/:roomId" element={<Room onToast={addToast} />} />
         <Route path="*" element={<NotFound onToast={addToast} />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   );
 }
