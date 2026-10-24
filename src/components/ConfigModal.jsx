@@ -99,29 +99,29 @@ export function ConfigModal({ isOpen, onClose, onToast }) {
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#cccccc]">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-[#cccccc]">
               <button
                 type="button"
                 onClick={() => {
                   setUrl('');
                   setAnonKey('');
                 }}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs py-2 sm:py-1 cursor-pointer"
               >
                 Reset to Default Sandbox
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-end">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="btn-classic"
+                  className="btn-classic flex-1 sm:flex-initial py-2 sm:py-1 cursor-pointer text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-classic-primary"
+                  className="btn-classic-primary flex-1 sm:flex-initial py-2 sm:py-1 cursor-pointer text-xs"
                 >
                   Save & Connect
                 </button>

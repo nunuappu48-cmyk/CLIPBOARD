@@ -14,6 +14,7 @@ export function SplitTextClipboard({
   user2Online = false,
   _saveStatus,
   maxCharacters,
+  mobileView = 'both', // 'user1' | 'user2' | 'both'
   onUser1Change,
   onUser2Change,
   onUser1NameChange,
@@ -63,14 +64,17 @@ export function SplitTextClipboard({
         {/* PANE 1: USER 1 (HOST / CREATOR) */}
         {/* ========================================================= */}
         <div
-          className={`panel-box flex flex-col h-[520px] sm:h-[580px] ${isUser1
+          className={`panel-box flex flex-col h-[420px] sm:h-[500px] lg:h-[580px] ${
+            mobileView === 'user2' ? 'hidden lg:flex' : 'flex'
+          } ${
+            isUser1
               ? 'border-2 border-[#1b365d]'
               : 'border border-[#999999] bg-[#f9f9f7]'
-            }`}
+          }`}
         >
           {/* Header Bar */}
-          <div className="panel-header">
-            <div className="flex items-center gap-2">
+          <div className="panel-header flex-wrap gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-mono font-bold bg-[#1b365d] text-white px-1.5 py-0.5 text-xs">
                 PANE 1
               </span>
@@ -81,7 +85,7 @@ export function SplitTextClipboard({
                     e.preventDefault();
                     handleSaveName('user1');
                   }}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 flex-wrap"
                 >
                   <input
                     type="text"
@@ -90,7 +94,7 @@ export function SplitTextClipboard({
                     onChange={(e) => setNameInput(e.target.value)}
                     placeholder="Name"
                     maxLength={25}
-                    className="input-classic text-xs py-0.5 px-1 font-bold"
+                    className="input-classic text-xs py-0.5 px-1 font-bold w-28 sm:w-auto"
                   />
                   <button type="submit" className="btn-classic text-xs py-0.5 px-1.5">
                     Save
@@ -131,20 +135,21 @@ export function SplitTextClipboard({
             </div>
 
             {/* Pane 1 Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 ml-auto">
               <button
                 type="button"
                 onClick={() => setUser1Monospace(!user1Monospace)}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs py-1 px-2"
                 title="Toggle font display"
               >
-                {user1Monospace ? 'Font: Mono' : 'Font: Sans'}
+                <span className="hidden sm:inline">{user1Monospace ? 'Font: Mono' : 'Font: Sans'}</span>
+                <span className="inline sm:hidden">{user1Monospace ? 'Mono' : 'Sans'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleCopySlot('user1', user1Text)}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs py-1 px-2"
               >
                 {copiedSlot === 'user1' ? '[ Copied ]' : '[ Copy ]'}
               </button>
@@ -154,7 +159,7 @@ export function SplitTextClipboard({
                   type="button"
                   onClick={() => setConfirmClearSlot('user1')}
                   disabled={!user1Text}
-                  className="btn-classic-danger text-xs"
+                  className="btn-classic-danger text-xs py-1 px-2"
                 >
                   [ Clear ]
                 </button>
@@ -163,22 +168,22 @@ export function SplitTextClipboard({
           </div>
 
           {/* Subheader: Connection & update time */}
-          <div className="px-3 py-1 bg-[#ece9d8] border-b border-[#cccccc] flex items-center justify-between text-[11px] font-mono text-[#555555]">
-            <span>
+          <div className="px-3 py-1 bg-[#ece9d8] border-b border-[#cccccc] flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-[#555555]">
+            <span className="truncate">
               STATUS: {user1Online ? 'ONLINE' : 'OFFLINE'}
               {user1UpdatedAt && ` • MODIFIED: ${formatTimeAgo(user1UpdatedAt).toUpperCase()}`}
             </span>
-            <span>SLOT: USER 1 (HOST)</span>
+            <span className="shrink-0">SLOT: USER 1 (HOST)</span>
           </div>
 
           {/* Transfer banner (visible to User 2 if User 1 typed) */}
           {isUser2 && user1Text && (
-            <div className="px-3 py-1.5 bg-[#eaf2fd] border-b border-[#b8d4f7] flex items-center justify-between text-xs font-mono text-[#1b365d]">
+            <div className="px-3 py-1.5 bg-[#eaf2fd] border-b border-[#b8d4f7] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs font-mono text-[#1b365d]">
               <span>{user1Name} updated content</span>
               <button
                 type="button"
                 onClick={() => onTransferText('user1', 'user2')}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs self-start sm:self-auto"
               >
                 [ Copy to My Screen -&gt; ]
               </button>
@@ -186,7 +191,7 @@ export function SplitTextClipboard({
           )}
 
           {/* Textarea */}
-          <div className="relative flex-1 p-2 bg-[#ffffff] flex flex-col">
+          <div className="relative flex-1 p-2 bg-[#ffffff] flex flex-col min-h-0">
             <textarea
               value={user1Text}
               onChange={(e) => {
@@ -198,14 +203,14 @@ export function SplitTextClipboard({
                   ? "Type or paste text here (Ctrl+V supported). Peer sees this screen synchronized in real time."
                   : `Waiting for ${user1Name} to input text... Everything appears here live (Read-only mode).`
               }
-              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs leading-relaxed ${user1Monospace ? 'font-mono' : 'font-sans'
+              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs sm:text-xs leading-relaxed ${user1Monospace ? 'font-mono' : 'font-sans'
                 } ${!isUser1 ? 'cursor-default select-text bg-[#fcfcfa]' : 'bg-[#ffffff]'}`}
               spellCheck={false}
             />
           </div>
 
           {/* Footer Bar */}
-          <div className="px-3 py-1.5 bg-[#ece9d8] border-t border-[#999999] flex items-center justify-between text-[11px] font-mono text-[#444444]">
+          <div className="px-3 py-1.5 bg-[#ece9d8] border-t border-[#999999] flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-[#444444]">
             <span>
               CHARS: {user1Text.length.toLocaleString()} / {maxCharacters.toLocaleString()}
             </span>
@@ -219,14 +224,17 @@ export function SplitTextClipboard({
         {/* PANE 2: USER 2 (GUEST) */}
         {/* ========================================================= */}
         <div
-          className={`panel-box flex flex-col h-[520px] sm:h-[580px] ${isUser2
+          className={`panel-box flex flex-col h-[420px] sm:h-[500px] lg:h-[580px] ${
+            mobileView === 'user1' ? 'hidden lg:flex' : 'flex'
+          } ${
+            isUser2
               ? 'border-2 border-[#1b365d]'
               : 'border border-[#999999] bg-[#f9f9f7]'
-            }`}
+          }`}
         >
           {/* Header Bar */}
-          <div className="panel-header">
-            <div className="flex items-center gap-2">
+          <div className="panel-header flex-wrap gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-mono font-bold bg-[#3d5a45] text-white px-1.5 py-0.5 text-xs">
                 PANE 2
               </span>
@@ -237,7 +245,7 @@ export function SplitTextClipboard({
                     e.preventDefault();
                     handleSaveName('user2');
                   }}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 flex-wrap"
                 >
                   <input
                     type="text"
@@ -246,7 +254,7 @@ export function SplitTextClipboard({
                     onChange={(e) => setNameInput(e.target.value)}
                     placeholder="Name"
                     maxLength={25}
-                    className="input-classic text-xs py-0.5 px-1 font-bold"
+                    className="input-classic text-xs py-0.5 px-1 font-bold w-28 sm:w-auto"
                   />
                   <button type="submit" className="btn-classic text-xs py-0.5 px-1.5">
                     Save
@@ -287,20 +295,21 @@ export function SplitTextClipboard({
             </div>
 
             {/* Pane 2 Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 ml-auto">
               <button
                 type="button"
                 onClick={() => setUser2Monospace(!user2Monospace)}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs py-1 px-2"
                 title="Toggle font display"
               >
-                {user2Monospace ? 'Font: Mono' : 'Font: Sans'}
+                <span className="hidden sm:inline">{user2Monospace ? 'Font: Mono' : 'Font: Sans'}</span>
+                <span className="inline sm:hidden">{user2Monospace ? 'Mono' : 'Sans'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleCopySlot('user2', user2Text)}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs py-1 px-2"
               >
                 {copiedSlot === 'user2' ? '[ Copied ]' : '[ Copy ]'}
               </button>
@@ -310,7 +319,7 @@ export function SplitTextClipboard({
                   type="button"
                   onClick={() => setConfirmClearSlot('user2')}
                   disabled={!user2Text}
-                  className="btn-classic-danger text-xs"
+                  className="btn-classic-danger text-xs py-1 px-2"
                 >
                   [ Clear ]
                 </button>
@@ -319,22 +328,22 @@ export function SplitTextClipboard({
           </div>
 
           {/* Subheader: Connection & update time */}
-          <div className="px-3 py-1 bg-[#ece9d8] border-b border-[#cccccc] flex items-center justify-between text-[11px] font-mono text-[#555555]">
-            <span>
+          <div className="px-3 py-1 bg-[#ece9d8] border-b border-[#cccccc] flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-[#555555]">
+            <span className="truncate">
               STATUS: {user2Online ? 'ONLINE' : 'AWAITING PEER JOIN...'}
               {user2UpdatedAt && ` • MODIFIED: ${formatTimeAgo(user2UpdatedAt).toUpperCase()}`}
             </span>
-            <span>SLOT: USER 2 (GUEST)</span>
+            <span className="shrink-0">SLOT: USER 2 (GUEST)</span>
           </div>
 
           {/* Transfer banner (visible to User 1 if User 2 typed) */}
           {isUser1 && user2Text && (
-            <div className="px-3 py-1.5 bg-[#eaf2fd] border-b border-[#b8d4f7] flex items-center justify-between text-xs font-mono text-[#1b365d]">
+            <div className="px-3 py-1.5 bg-[#eaf2fd] border-b border-[#b8d4f7] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs font-mono text-[#1b365d]">
               <span>{user2Name} updated content</span>
               <button
                 type="button"
                 onClick={() => onTransferText('user2', 'user1')}
-                className="btn-classic text-xs"
+                className="btn-classic text-xs self-start sm:self-auto"
               >
                 [ &lt;- Copy to My Screen ]
               </button>
@@ -342,7 +351,7 @@ export function SplitTextClipboard({
           )}
 
           {/* Textarea */}
-          <div className="relative flex-1 p-2 bg-[#ffffff] flex flex-col">
+          <div className="relative flex-1 p-2 bg-[#ffffff] flex flex-col min-h-0">
             <textarea
               value={user2Text}
               onChange={(e) => {
@@ -354,14 +363,14 @@ export function SplitTextClipboard({
                   ? "Type or paste text here (Ctrl+V supported). Peer sees this screen synchronized in real time."
                   : `Waiting for ${user2Name} to join and type... Everything appears here live (Read-only mode).`
               }
-              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs leading-relaxed ${user2Monospace ? 'font-mono' : 'font-sans'
+              className={`w-full flex-1 resize-none bg-transparent focus:outline-none text-[#1a1a1a] p-2 border border-[#d8d8d4] text-xs sm:text-xs leading-relaxed ${user2Monospace ? 'font-mono' : 'font-sans'
                 } ${!isUser2 ? 'cursor-default select-text bg-[#fcfcfa]' : 'bg-[#ffffff]'}`}
               spellCheck={false}
             />
           </div>
 
           {/* Footer Bar */}
-          <div className="px-3 py-1.5 bg-[#ece9d8] border-t border-[#999999] flex items-center justify-between text-[11px] font-mono text-[#444444]">
+          <div className="px-3 py-1.5 bg-[#ece9d8] border-t border-[#999999] flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono text-[#444444]">
             <span>
               CHARS: {user2Text.length.toLocaleString()} / {maxCharacters.toLocaleString()}
             </span>

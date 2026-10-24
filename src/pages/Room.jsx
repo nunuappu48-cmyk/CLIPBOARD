@@ -94,8 +94,9 @@ export function Room({ onToast }) {
   const [user1Online, setUser1Online] = useState(false);
   const [user2Online, setUser2Online] = useState(false);
 
-  // Tab for mobile view
-  const [mobileTab, setMobileTab] = useState('split');
+  // Tab for mobile view: 'my' | 'peer' | 'split' | 'images'
+  const [mobileTab, setMobileTab] = useState('my');
+  const [peerUpdatedAlert, setPeerUpdatedAlert] = useState(false);
 
   // Room verification hook
   const {
@@ -189,9 +190,11 @@ export function Room({ onToast }) {
       },
       onTextUpdate: (remoteData) => {
         applyRemoteUpdate(remoteData);
+        setPeerUpdatedAlert(true);
       },
       onPostgresTextUpdate: (newRow) => {
         applyPostgresUpdate(newRow);
+        setPeerUpdatedAlert(true);
       },
       onImageAdded: (newImage) => {
         handleRemoteImageAdded(newImage);
@@ -305,7 +308,7 @@ export function Room({ onToast }) {
         onToast={onToast}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-4 flex flex-col gap-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-4 py-3 sm:py-4 flex flex-col gap-3 sm:gap-4 safe-bottom">
         {/* Prominent 6-Digit Room Code Card */}
         <ShareRoomCode
           code={roomCode}
@@ -314,26 +317,55 @@ export function Room({ onToast }) {
           onToast={onToast}
         />
 
+        {/* Mobile Segmented Tab Switcher */}
+        <div className="flex sm:hidden border border-[#999999] bg-[#e5e5e0] overflow-x-auto text-xs font-bold divide-x divide-[#999999] shadow-xs">
+          <button
+            type="button"
+            onClick={() => setMobileTab('my')}
+            className={`flex-1 py-2 px-1 text-center shrink-0 min-w-0 flex items-center justify-center gap-1 cursor-pointer ${
+              mobileTab === 'my' ? 'bg-[#1b365d] text-white' : 'text-[#333333]'
+            }`}
+          >
+            <span className="truncate">My Screen</span>
+          </button>
 
-        {/* Mobile Tab Switcher */}
-        <div className="flex sm:hidden border border-[#999999] bg-[#e5e5e0]">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileTab('peer');
+              setPeerUpdatedAlert(false);
+            }}
+            className={`flex-1 py-2 px-1 text-center shrink-0 min-w-0 flex items-center justify-center gap-1 relative cursor-pointer ${
+              mobileTab === 'peer' ? 'bg-[#1b365d] text-white' : 'text-[#333333]'
+            }`}
+          >
+            <span className="truncate">{userSlot === 'user1' ? (user2Name || 'Peer') : (user1Name || 'Host')}</span>
+            {(userSlot === 'user1' ? user2Online : user1Online) && (
+              <span className="w-2 h-2 rounded-full bg-[#3c763d] inline-block shrink-0" title="Peer online" />
+            )}
+            {peerUpdatedAlert && mobileTab !== 'peer' && (
+              <span className="w-2 h-2 rounded-full bg-[#8b0000] inline-block shrink-0 animate-pulse" title="Peer has new text" />
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => setMobileTab('split')}
-            className={`flex-1 py-1.5 text-xs font-bold ${
+            className={`flex-1 py-2 px-1 text-center shrink-0 min-w-0 flex items-center justify-center gap-1 cursor-pointer ${
               mobileTab === 'split' ? 'bg-[#1b365d] text-white' : 'text-[#333333]'
             }`}
           >
-            Dual Screens
+            <span className="truncate">Dual</span>
           </button>
+
           <button
             type="button"
             onClick={() => setMobileTab('images')}
-            className={`flex-1 py-1.5 text-xs font-bold ${
+            className={`flex-1 py-2 px-1 text-center shrink-0 min-w-0 flex items-center justify-center gap-1 cursor-pointer ${
               mobileTab === 'images' ? 'bg-[#1b365d] text-white' : 'text-[#333333]'
             }`}
           >
-            Images ({images.length})
+            <span className="truncate">Files ({images.length})</span>
           </button>
         </div>
 
@@ -351,6 +383,13 @@ export function Room({ onToast }) {
             user2Online={user2Online}
             _saveStatus={saveStatus}
             maxCharacters={maxCharacters}
+            mobileView={
+              mobileTab === 'my'
+                ? userSlot
+                : mobileTab === 'peer'
+                ? (userSlot === 'user1' ? 'user2' : 'user1')
+                : 'both'
+            }
             onUser1Change={handleUser1Change}
             onUser2Change={handleUser2Change}
             onUser1NameChange={handleUser1NameChange}
@@ -362,13 +401,14 @@ export function Room({ onToast }) {
         </div>
 
         {/* Shared Screenshots & Images Gallery */}
-        <div className={`flex flex-col gap-3 ${mobileTab === 'user1' || mobileTab === 'user2' ? 'hidden sm:flex' : 'flex'}`}>
-          <div className="border-b border-[#999999] pb-1 flex items-center justify-between text-xs">
+        <div className={`flex flex-col gap-3 ${mobileTab !== 'images' ? 'hidden sm:flex' : 'flex'}`}>
+          <div className="border-b border-[#999999] pb-1 flex flex-wrap items-center justify-between gap-1 text-xs">
             <span className="font-mono font-bold uppercase text-[#1a1a1a]">
               Shared Image Repository & Screenshots
             </span>
             <span className="font-mono text-[11px] text-[#666666]">
-              Paste directly with <kbd className="bg-[#ece9d8] border border-[#cccccc] px-1 font-mono">Ctrl+V</kbd>
+              <span className="hidden sm:inline">Paste directly with <kbd className="bg-[#ece9d8] border border-[#cccccc] px-1 font-mono">Ctrl+V</kbd></span>
+              <span className="sm:hidden">Tap below to upload photos</span>
             </span>
           </div>
 

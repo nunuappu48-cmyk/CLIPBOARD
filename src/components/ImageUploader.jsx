@@ -28,6 +28,8 @@ export function ImageUploader({ uploadQueue = [], onUploadFiles }) {
     }
   };
 
+  const cameraInputRef = useRef(null);
+
   const handleFileChange = (e) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -35,6 +37,9 @@ export function ImageUploader({ uploadQueue = [], onUploadFiles }) {
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
     }
   };
 
@@ -45,7 +50,7 @@ export function ImageUploader({ uploadQueue = [], onUploadFiles }) {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`panel-box p-3 text-center border ${
+        className={`panel-box p-3 border ${
           isDragOver ? 'border-[#1b365d] bg-[#eaf2fd]' : 'border-[#999999] bg-[#ffffff]'
         }`}
       >
@@ -58,21 +63,38 @@ export function ImageUploader({ uploadQueue = [], onUploadFiles }) {
           className="hidden"
         />
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
-          <div>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
+          <div className="flex-1">
             <div className="text-xs font-bold text-[#1a1a1a]">
               IMAGE & SCREENSHOT UPLOADER
             </div>
             <div className="text-[11px] font-mono text-[#555555] mt-0.5">
-              Formats: PNG, JPG, GIF, WebP (≤10 MB). Paste screenshots directly with <span className="bg-[#ece9d8] px-1 border border-[#cccccc]">Ctrl+V</span>.
+              Formats: PNG, JPG, GIF, WebP (≤10 MB). <span className="hidden sm:inline">Paste screenshots with <kbd className="bg-[#ece9d8] px-1 border border-[#cccccc]">Ctrl+V</kbd>.</span><span className="sm:hidden">Tap below to choose photos or snap camera picture.</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="btn-classic text-xs sm:hidden flex-1 py-2 cursor-pointer"
+              title="Take photo using mobile camera"
+            >
+              [ Take Photo 📷 ]
+            </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="btn-classic-primary text-xs"
+              className="btn-classic-primary text-xs w-full sm:w-auto flex-1 sm:flex-initial py-2 cursor-pointer"
             >
               [ Browse Files... ]
             </button>

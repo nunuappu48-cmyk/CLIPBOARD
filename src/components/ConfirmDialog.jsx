@@ -22,10 +22,10 @@ export function ConfirmDialog({
       <div className="w-full max-w-md bg-[#ffffff] border-2 border-[#1b365d] shadow-none">
         {/* Title bar */}
         <div className="bg-[#1b365d] text-white px-3 py-1.5 flex items-center justify-between font-mono text-xs font-bold">
-          <span id="dialog-title">{title}</span>
+          <span id="dialog-title" className="truncate pr-2">{title}</span>
           <button
             onClick={onCancel}
-            className="btn-classic text-[10px] py-0 px-1 text-black font-bold"
+            className="btn-classic text-xs py-0.5 px-2 text-black font-bold cursor-pointer shrink-0"
             aria-label="Close"
           >
             ✕
@@ -33,7 +33,7 @@ export function ConfirmDialog({
         </div>
 
         {/* Body */}
-        <div className="p-4 text-xs font-sans text-[#1a1a1a]">
+        <div className="p-3 sm:p-4 text-xs font-sans text-[#1a1a1a]">
           <p className="leading-relaxed mb-4">{message}</p>
 
           {/* Action buttons */}
@@ -41,7 +41,7 @@ export function ConfirmDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="btn-classic"
+              className="btn-classic py-2 px-3.5 sm:py-1 sm:px-2.5 cursor-pointer text-xs"
             >
               {cancelLabel}
             </button>
@@ -51,7 +51,7 @@ export function ConfirmDialog({
                 onConfirm();
                 onCancel();
               }}
-              className={isDestructive ? 'btn-classic-danger' : 'btn-classic-primary'}
+              className={`${isDestructive ? 'btn-classic-danger' : 'btn-classic-primary'} py-2 px-3.5 sm:py-1 sm:px-2.5 cursor-pointer text-xs font-bold`}
             >
               {confirmLabel}
             </button>

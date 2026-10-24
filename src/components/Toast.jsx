@@ -44,15 +44,15 @@ function ToastItem({ toast, onClose }) {
   return (
     <div
       role="status"
-      className={`flex items-center justify-between gap-3 px-3 py-1.5 border font-mono text-xs ${styles[type]}`}
+      className={`flex items-start sm:items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 border font-mono text-xs ${styles[type]}`}
     >
-      <div className="flex items-center gap-2">
-        <strong className="font-bold">{prefixes[type]}</strong>
-        <span>{toast.message}</span>
+      <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
+        <strong className="font-bold shrink-0">{prefixes[type]}</strong>
+        <span className="break-words">{toast.message}</span>
       </div>
       <button
         onClick={onClose}
-        className="btn-classic text-[11px] py-0 px-1.5"
+        className="btn-classic text-[11px] py-0.5 px-2 shrink-0 cursor-pointer"
         aria-label="Dismiss message"
       >
         [x]

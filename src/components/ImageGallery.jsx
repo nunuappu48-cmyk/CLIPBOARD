@@ -10,7 +10,9 @@ export function ImageGallery({
 }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [viewMode, setViewMode] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 640 ? 'grid' : 'table';
+  });
 
   const handleCopyLink = async (e, image) => {
     e.stopPropagation();
@@ -75,110 +77,180 @@ export function ImageGallery({
   return (
     <div className="panel-box">
       {/* Header Bar */}
-      <div className="panel-header">
+      <div className="panel-header flex-wrap gap-1.5">
         <span className="font-mono text-xs font-bold">
-          SHARED FILES REPOSITORY ({images.length} ITEMS)
+          SHARED FILES ({images.length} {images.length === 1 ? 'ITEM' : 'ITEMS'})
         </span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setViewMode('table')}
-            className={`btn-classic text-[11px] ${viewMode === 'table' ? 'bg-[#d0d0ca] font-bold' : ''}`}
+            className={`btn-classic text-[11px] cursor-pointer ${viewMode === 'table' ? 'bg-[#d0d0ca] font-bold' : ''}`}
           >
-            Table View
+            List View
           </button>
           <button
             type="button"
             onClick={() => setViewMode('grid')}
-            className={`btn-classic text-[11px] ${viewMode === 'grid' ? 'bg-[#d0d0ca] font-bold' : ''}`}
+            className={`btn-classic text-[11px] cursor-pointer ${viewMode === 'grid' ? 'bg-[#d0d0ca] font-bold' : ''}`}
           >
             Thumbnails
           </button>
         </div>
       </div>
 
-      {/* Table View */}
+      {/* Table / List View */}
       {viewMode === 'table' ? (
-        <div className="overflow-x-auto">
-          <table className="table-classic">
-            <thead>
-              <tr>
-                <th className="w-12 text-center">Thumb</th>
-                <th>File Name</th>
-                <th className="w-24">Size</th>
-                <th className="w-24">Uploaded By</th>
-                <th className="w-28">Timestamp</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {images.map((image) => (
-                <tr key={image.id}>
-                  <td className="text-center p-1">
-                    <img
-                      src={image.url}
-                      alt={image.original_filename}
-                      onClick={() => onImageClick(image)}
-                      className="w-9 h-9 object-cover border border-[#999999] cursor-pointer mx-auto bg-[#ffffff]"
-                      loading="lazy"
-                    />
-                  </td>
-                  <td>
+        <div>
+          {/* Mobile Card List for < md screens */}
+          <div className="divide-y divide-[#cccccc] md:hidden">
+            {images.map((image) => (
+              <div key={image.id} className="p-3 bg-[#ffffff] flex flex-col gap-2">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={image.url}
+                    alt={image.original_filename}
+                    onClick={() => onImageClick(image)}
+                    className="w-12 h-12 object-cover border border-[#999999] cursor-pointer bg-[#ffffff] shrink-0"
+                    loading="lazy"
+                  />
+                  <div className="min-w-0 flex-1">
                     <button
                       type="button"
                       onClick={() => onImageClick(image)}
-                      className="text-[#003399] hover:underline font-mono text-left font-bold cursor-pointer"
+                      className="text-[#003399] hover:underline font-mono text-left font-bold text-xs truncate block w-full cursor-pointer"
                     >
                       {image.original_filename}
                     </button>
-                  </td>
-                  <td className="font-mono text-xs text-[#555555]">
-                    {formatFileSize(image.file_size)}
-                  </td>
-                  <td>
-                    <span className="font-mono text-[11px] px-1 py-0.2 border border-[#999999] bg-[#ece9d8]">
-                      {image.uploader_id === 'user1' ? 'User 1' : image.uploader_id === 'user2' ? 'User 2' : 'Shared'}
-                    </span>
-                  </td>
-                  <td className="font-mono text-xs text-[#555555]">
-                    {formatTimeAgo(image.uploaded_at)}
-                  </td>
-                  <td className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-[#555555] mt-0.5">
+                      <span>{formatFileSize(image.file_size)}</span>
+                      <span>•</span>
+                      <span className="px-1 py-0.2 border border-[#999999] bg-[#ece9d8]">
+                        {image.uploader_id === 'user1' ? 'User 1' : image.uploader_id === 'user2' ? 'User 2' : 'Shared'}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#777777] mt-0.5">
+                      {formatTimeAgo(image.uploaded_at)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-1 pt-1 border-t border-[#f0f0eb]">
+                  <button
+                    type="button"
+                    onClick={() => onImageClick(image)}
+                    className="btn-classic text-[11px] flex-1 py-1.5"
+                  >
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleCopyLink(e, image)}
+                    className="btn-classic text-[11px] flex-1 py-1.5"
+                  >
+                    {copiedId === image.id ? 'Copied' : 'Copy URL'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDownload(e, image)}
+                    className="btn-classic text-[11px] flex-1 py-1.5"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteClick(e, image)}
+                    className="btn-classic-danger text-[11px] py-1.5 px-2"
+                  >
+                    {confirmDeleteId === image.id ? 'Sure?' : 'Del'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View for >= md screens */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="table-classic">
+              <thead>
+                <tr>
+                  <th className="w-12 text-center">Thumb</th>
+                  <th>File Name</th>
+                  <th className="w-24">Size</th>
+                  <th className="w-24">Uploaded By</th>
+                  <th className="w-28">Timestamp</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {images.map((image) => (
+                  <tr key={image.id}>
+                    <td className="text-center p-1">
+                      <img
+                        src={image.url}
+                        alt={image.original_filename}
+                        onClick={() => onImageClick(image)}
+                        className="w-9 h-9 object-cover border border-[#999999] cursor-pointer mx-auto bg-[#ffffff]"
+                        loading="lazy"
+                      />
+                    </td>
+                    <td>
                       <button
                         type="button"
                         onClick={() => onImageClick(image)}
-                        className="btn-classic text-[11px]"
+                        className="text-[#003399] hover:underline font-mono text-left font-bold cursor-pointer"
                       >
-                        [ View ]
+                        {image.original_filename}
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopyLink(e, image)}
-                        className="btn-classic text-[11px]"
-                      >
-                        {copiedId === image.id ? '[ Copied ]' : '[ Copy URL ]'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDownload(e, image)}
-                        className="btn-classic text-[11px]"
-                      >
-                        [ Download ]
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteClick(e, image)}
-                        className="btn-classic-danger text-[11px]"
-                      >
-                        {confirmDeleteId === image.id ? '[ Confirm Delete? ]' : '[ Delete ]'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="font-mono text-xs text-[#555555]">
+                      {formatFileSize(image.file_size)}
+                    </td>
+                    <td>
+                      <span className="font-mono text-[11px] px-1 py-0.2 border border-[#999999] bg-[#ece9d8]">
+                        {image.uploader_id === 'user1' ? 'User 1' : image.uploader_id === 'user2' ? 'User 2' : 'Shared'}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs text-[#555555]">
+                      {formatTimeAgo(image.uploaded_at)}
+                    </td>
+                    <td className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onImageClick(image)}
+                          className="btn-classic text-[11px]"
+                        >
+                          [ View ]
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyLink(e, image)}
+                          className="btn-classic text-[11px]"
+                        >
+                          {copiedId === image.id ? '[ Copied ]' : '[ Copy URL ]'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDownload(e, image)}
+                          className="btn-classic text-[11px]"
+                        >
+                          [ Download ]
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteClick(e, image)}
+                          className="btn-classic-danger text-[11px]"
+                        >
+                          {confirmDeleteId === image.id ? '[ Confirm Delete? ]' : '[ Delete ]'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         /* Dense Grid View */

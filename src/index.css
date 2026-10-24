@@ -281,3 +281,44 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #b8b5a5;
 }
+
+/* Mobile Responsiveness & Touch Enhancements */
+@media (max-width: 640px) {
+  /* Prevent iOS Safari auto-zoom when focusing inputs/textareas */
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select,
+  .input-classic {
+    font-size: 16px !important;
+  }
+
+  /* Increase tap target sizes slightly on touch screens while maintaining retro aesthetic */
+  .btn-classic,
+  .btn-classic-primary,
+  .btn-classic-danger,
+  .btn-classic-olive {
+    min-height: 34px;
+    padding: 6px 10px;
+    touch-action: manipulation;
+  }
+
+  /* Compact scrollbars on mobile */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  /* Support mobile notch and safe-area padding */
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Touch action optimization */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
